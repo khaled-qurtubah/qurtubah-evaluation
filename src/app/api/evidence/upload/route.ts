@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       fileName: file.name,
-      filePath: `/uploads/${fileName}`,
+      filePath: `/api/files/${fileName}`,
       size: file.size,
     }, { status: 201 });
   } catch (error) {
