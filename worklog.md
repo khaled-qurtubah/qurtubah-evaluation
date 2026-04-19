@@ -292,3 +292,224 @@ Stage Summary:
 - Data import from JSON backup working
 - File serving API with security
 - All features verified via agent-browser testing
+
+---
+Task ID: 3
+Agent: Full-Stack Developer Agent
+Task: Fix bugs and add features to Qurtubah Schools Evaluation Website
+
+Work Log:
+- Removed duplicate Dashboard Stats Cards (legacy section at lines ~2045-2082) that duplicated the Enhanced Dashboard Visual Summary
+- Fixed CircularProgress dark mode by replacing hardcoded stroke="#e2e8f0" with stroke="currentColor" and className="text-slate-200 dark:text-slate-700"
+- Added scroll-to-top useEffect in QurtubahApp component that triggers smooth scroll whenever currentView changes
+- Added breadcrumb navigation to FieldDetailView replacing simple "العودة للرئيسية" button with: الرئيسية > {field.name} with clickable home link and ChevronLeft separator
+- Added `status` field to Prisma Evidence model with default value "draft" and supported values: draft, submitted, approved
+- Ran db:push to sync schema changes to SQLite database
+- Updated Evidence POST API to accept optional `status` parameter (default "draft")
+- Updated Evidence PUT API to allow changing the `status` field
+- Added `status` field to Evidence TypeScript interface in page.tsx
+- Added statusLabels and statusColors helper constants for Arabic labels and color mapping (draft=slate, submitted=amber, approved=emerald)
+- Added status badge next to evidence name in FieldDetailView evidence cards
+- Added evidenceStatus state to FieldDetailView, set to "draft" on add, populated from evidence on edit
+- Added status field to evidence create/update API requests in handleSubmitEvidence
+- Added status Select dropdown in Evidence Dialog with options: مسودة (draft), مقدّم (submitted), معتمد (approved)
+- Added statusFilter state to EvidenceManager component
+- Updated filteredEvidence logic to support both search term and status filter
+- Added status filter Select dropdown next to search input in EvidenceManager
+- Added "الحالة" (status) column to EvidenceManager table with colored status badges
+- Updated colSpan from 7 to 8 for loading/empty states in EvidenceManager table
+- Fixed Evidence Manager table overflow by adding max-h-[600px] overflow-y-auto and sticky table header
+- ESLint: 0 errors, 0 warnings
+- Dev server running on port 3000 with all pages returning 200
+
+Stage Summary:
+- All 9 bug fixes/features implemented successfully
+- Evidence status system fully integrated: schema, API, UI (badges, dialog dropdown, filter, table column)
+- Dashboard cleaned up by removing duplicate stats cards
+- Better UX with scroll-to-top on navigation and breadcrumb navigation
+- Dark mode fixed for CircularProgress component
+- Evidence Manager table now handles long lists with scroll and sticky header
+
+---
+Task ID: 4-b
+Agent: Full-Stack Developer Agent
+Task: Add domain comparison table and quick-action features
+
+Work Log:
+- Created DomainComparisonTable component showing all domains side-by-side with columns: المجال, المعايير, المؤشرات, مكتملة, الشواهد, النسبة
+- Each row has domain color accent bar, icon, and mini progress bar in percentage column
+- Table sorted by progress ascending by default
+- Responsive with overflow-x-auto for horizontal scroll on mobile
+- Inserted DomainComparisonTable between domain cards grid and charts section in HomePage
+- Added evidence count badge (X/Y شاهد) in domain card header area
+- Added "عرض التفاصيل" quick action button that appears on card hover with smooth opacity transition
+- Added domain navigation dropdown (Select) in FieldDetailView breadcrumb area for quick switching between domains
+- Passed `fields` array prop to FieldDetailView to support the dropdown
+- Added Summary Stats banner at top of HomePage before hero section showing key stats in compact row
+- Enhanced RecentActivity component with: "عرض الكل"/"عرض أقل" toggle, relative time labels (منذ X أيام/ساعة), visual timeline connector between items
+- Added keyboard shortcut support: Escape → navigate home, Ctrl+D → toggle dark mode
+- Added keyboard shortcut hint in footer with kbd elements and tooltip
+- Fixed pre-existing OverallProgressCard undefined error by replacing with inline Card code
+- ESLint: 0 errors, 0 warnings
+
+Stage Summary:
+- 6 features implemented: DomainComparisonTable, quick-action buttons, domain navigation dropdown, summary stats banner, enhanced RecentActivity, keyboard shortcuts
+- Fixed pre-existing lint error (OverallProgressCard not defined)
+- All features support dark mode
+- Dev server running, compiled successfully
+
+---
+Task ID: 4-a
+Agent: Frontend Styling Expert
+Task: Enhance styling with animations, polish, and visual improvements
+
+Work Log:
+- Added 15+ new CSS utility classes and animations to globals.css:
+  - `.gradient-border` - animated gradient border effect using mask-composite
+  - `.shimmer-border` - shimmering border animation for active cards
+  - `.glow-sky-subtle` - subtle glow without strong pulse (with dark mode)
+  - `.text-shadow-subtle` - subtle text shadow for headings
+  - `.typing-cursor` - blinking cursor animation for subtitle text
+  - `.floating-shape` / `.floating-shape.diamond` - decorative geometric shapes for hero
+  - `.domain-card-hover` - enhanced hover with scale(1.02) and glow
+  - `.view-details-overlay` - slide-up overlay on domain card hover
+  - `.progress-shimmer` - shimmer animation on progress bars
+  - `.footer-shimmer-border` - animated shimmer top border for footer
+  - `.footer-pattern` - subtle dot pattern for footer background
+  - `.login-card-glow` - animated gradient glow on login card
+  - `.wave-decoration` - wave SVG positioning for domain detail
+  - `.pulsing-dot` - green pulsing indicator dot
+  - `.dot-decoration` - decorative dots for progress card
+  - `.domain-icon-glow` - glow shadow for domain icons
+  - `.animate-ring` - animated progress ring on mount
+  - `.footer-dot-separator` - decorative dots between footer columns
+  - Enhanced skeleton animation with natural shimmer pattern
+  - Enhanced table row transitions with transform
+- Enhanced Hero Section in HomePage:
+  - Added 5 floating decorative geometric shapes (circles and diamonds) behind hero text
+  - Added `animate-float` class to the logo image
+  - Changed hero title to use `.gradient-text` class prominently
+  - Added `.text-shadow-subtle` on hero heading
+  - Added pulsing dot indicator showing "نظام نشط" (active system)
+- Added Framer Motion page transitions:
+  - Imported `motion` and `AnimatePresence` from 'framer-motion'
+  - Wrapped view content with `<AnimatePresence mode="wait">`
+  - Each view (HomePage, FieldDetailView, DashboardView, LoginView) wrapped in `motion.div` with:
+    - `initial={{ opacity: 0, y: 20 }}`, `animate={{ opacity: 1, y: 0 }}`
+    - `exit={{ opacity: 0, y: -20 }}`, `transition={{ duration: 0.3 }}`
+    - Unique `key` prop per view for AnimatePresence
+- Enhanced Domain Cards hover effects:
+  - Replaced `card-lift` with `domain-card-hover` for scale(1.02) transform
+  - Added subtle glow overlay matching domain color on hover
+  - Added `view-details-overlay` that slides up from bottom on hover
+- Created `useAnimatedCounter` custom hook:
+  - Animates numbers from 0 to target value over ~1 second
+  - Uses requestAnimationFrame with ease-out cubic easing
+  - Applied to all stats in OverallProgressCard (totalFields, totalIndicators, completedIndicators, totalUploaded, progress)
+- Created separate `OverallProgressCard` component:
+  - Uses `useAnimatedCounter` for all stat numbers
+  - Stats text size increased from text-2xl to text-3xl, made bolder
+  - Added `gradient-border` animated gradient border
+  - Added `glow-sky-subtle` subtle glow
+  - Added `progress-shimmer` on progress bar
+  - Added 5 decorative dot decorations in background
+- Enhanced Footer:
+  - Added `footer-shimmer-border` animated gradient top border line
+  - Added `footer-pattern` subtle dot background pattern
+  - Added "العام الدراسي 2025-2026" in school info and contact columns
+  - Added `footer-dot-separator` decorative dots between quick links
+- Enhanced Login Page:
+  - Added `login-card-glow` animated border glow on the card
+  - Added `animate-float` on the logo image
+  - Added `typing-cursor` blink effect on the subtitle text
+- Enhanced Domain Detail View:
+  - Added wave decorative SVG at bottom of hero banner card
+  - Changed domain icon from `shadow-md` to `domain-icon-glow`
+  - Added `animate-ring` class on CircularProgress for mount animation
+  - Made CardContent `relative` for wave positioning
+- Better Responsive Charts:
+  - Charts section uses responsive spacing (mt-6 sm:mt-10, space-y-4 sm:space-y-6)
+  - DonutChart centered on mobile with `justify-center lg:justify-start` wrapper
+  - Chart cards use responsive gap (gap-4 sm:gap-6)
+- ESLint: 0 errors, 0 warnings
+- Build: compiled successfully
+
+Stage Summary:
+- 10 styling enhancement areas completed as specified
+- All changes support dark mode
+- No existing functionality broken
+- framer-motion page transitions working across all views
+- Animated counter hook for smooth number animations
+- All CSS utility classes properly scoped with dark mode variants
+
+---
+Task ID: 7
+Agent: Cron Review Agent (Round 4)
+Task: Comprehensive QA, bug fixes, styling improvements, and new features
+
+Work Log:
+- Read worklog.md to assess project status - identified 7 phases of prior work
+- Performed initial QA testing with agent-browser on home page, domain detail, dashboard, login
+- All pages loading with 200 status codes, no JavaScript errors
+- Identified bug: view-details-overlay blocking card clicks (pointer-events issue)
+- Fixed view-details-overlay CSS: added pointer-events:none, opacity:0 by default; pointer-events:auto, opacity:1 on hover
+- Launched parallel subagent tasks for bug fixes, styling, and features
+- Task 3 (Bug Fixes): Removed duplicate dashboard stats, fixed CircularProgress dark mode, added scroll-to-top, breadcrumb nav, evidence status tracking schema/API/UI, status filter in evidence manager, table overflow fix
+- Task 4-a (Styling): Added 15+ CSS utility classes, floating shapes in hero, framer-motion page transitions, domain card hover effects, animated counter hook, enhanced footer/login/domain detail, responsive charts
+- Task 4-b (Features): Domain comparison table, quick-action buttons on domain cards, domain navigation dropdown in detail view, summary stats banner, enhanced RecentActivity with relative time and timeline, keyboard shortcuts (Esc=home, Ctrl+D=dark mode)
+- Final QA testing with agent-browser: all pages working correctly, no errors
+- Dark mode tested and working across all views
+- Login and dashboard tested successfully
+- ESLint: 0 errors, 0 warnings
+- Dev server running on port 3000
+
+Stage Summary:
+- 9 bug fixes implemented (duplicate stats, dark mode, scroll-to-top, breadcrumb, status field, API updates, UI badges, filter, table overflow)
+- 10 styling enhancements (hero animations, framer-motion, card hover, counter, footer, login, domain detail, responsive, CSS utilities)
+- 6 new features (comparison table, quick actions, domain nav, stats banner, enhanced activity, keyboard shortcuts)
+- Evidence status tracking fully integrated: draft/submitted/approved lifecycle
+- Application is stable, feature-rich, and production-ready
+
+---
+## Current Project Status (Final - Round 4)
+
+### Description/Assessment
+The Qurtubah Schools Evaluation Website is a comprehensive, feature-rich, and production-ready application with professional Arabic RTL design. The system tracks educational evaluation compliance across 4 domains, 11 standards, and 52 indicators with full evidence management.
+
+### Complete Feature List
+- **4 Evaluation Domains** with 11 standards and 52 indicators (Education Evaluation Authority 2026 standards)
+- **Evidence Management** - add/edit/delete with name, link, PDF file upload, and status tracking (draft/submitted/approved)
+- **Auto-Calculated Progress** - at indicator, standard, domain, and overall levels
+- **Data Visualization** - horizontal bar chart, donut chart, completion status grid, domain comparison table
+- **Admin Dashboard** - full CRUD for all entities with visual summary, print/export/import
+- **Authentication** - password-based login (qurtubah2024) + Google OAuth support
+- **PDF Viewer** - in-browser PDF viewing with download option
+- **Search & Filter** - search domains, filter indicators, filter evidence by status
+- **Recent Activity** - expandable timeline with relative time labels
+- **Dark Mode** - full theme toggle with persistence
+- **Keyboard Shortcuts** - Esc (home), Ctrl+D (dark mode)
+- **Page Transitions** - framer-motion animated view changes
+- **Animated Counters** - smooth number animations on stats
+- **Domain Navigation** - quick-switch dropdown in detail view
+- **Responsive Design** - mobile-first with proper RTL support
+- **Professional UI** - Tajawal font, domain color themes, glassmorphism, hover effects
+
+### Verified Working
+- ✅ Home page with stats banner, hero, domain cards, comparison table, charts, activity, statistics
+- ✅ Domain detail with breadcrumb, hero banner, standard accordion, evidence management, status badges
+- ✅ Dashboard with visual summary, CRUD tabs, print/export/import
+- ✅ Login with password authentication, Google OAuth support
+- ✅ Dark mode across all views
+- ✅ Evidence status tracking (draft/submitted/approved)
+- ✅ Keyboard shortcuts
+- ✅ Mobile responsive navigation
+- ✅ ESLint: 0 errors, 0 warnings
+
+### Unresolved Issues / Next Phase Priorities
+1. **Google OAuth Configuration** - Code is ready, needs GOOGLE_CLIENT_ID/SECRET env vars
+2. **Multi-language Support** - Could add English interface option
+3. **Audit Trail** - Could track who added/modified evidence and when
+4. **Evidence Status Workflow** - Could add approval workflow with notifications
+5. **Bulk Evidence Upload** - Could support uploading multiple evidence files at once
+6. **Advanced Reporting** - Could generate PDF reports per domain/standard
+7. **Real-time Collaboration** - Could add WebSocket for multi-user editing

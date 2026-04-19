@@ -32,7 +32,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, link, fileName, filePath } = body;
+    const { name, link, fileName, filePath, status } = body;
 
     const evidence = await db.evidence.update({
       where: { id },
@@ -41,6 +41,7 @@ export async function PUT(
         ...(link !== undefined && { link }),
         ...(fileName !== undefined && { fileName }),
         ...(filePath !== undefined && { filePath }),
+        ...(status !== undefined && { status }),
       },
     });
 

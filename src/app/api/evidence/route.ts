@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// Evidence API - supports status field (draft, submitted, approved)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, link, fileName, filePath, indicatorId } = body;
+    const { name, link, fileName, filePath, indicatorId, status } = body;
 
     if (!name || !indicatorId) {
       return NextResponse.json({ error: 'Name and indicatorId are required' }, { status: 400 });
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
         link: link || null,
         fileName: fileName || null,
         filePath: filePath || null,
+        status: status || 'draft',
         indicatorId,
       },
     });
