@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String?
+  email        String    @unique
+  image        String?
+  googleId     String?   @unique
+  role         String    @default("user") // "admin" or "user"
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Field {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  order       Int        @default(0)
+  icon        String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  standards   Standard[]
+}
+
+model Standard {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  order       Int        @default(0)
+  fieldId     String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  field       Field      @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  indicators  Indicator[]
+}
+
+model Indicator {
+  id             String     @id @default(cuid())
+  name           String
+  description    String?
+  order          Int        @default(0)
+  requiredEvidence Int      @default(1)
+  standardId     String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  standard       Standard   @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  evidences      Evidence[]
+}
+
+model Evidence {
+  id          String    @id @default(cuid())
+  name        String
+  link        String?
+  fileName    String?
+  filePath    String?
+  indicatorId String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  indicator   Indicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+}
