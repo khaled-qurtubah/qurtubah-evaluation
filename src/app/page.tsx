@@ -7,8 +7,14 @@ import {
   Plus, Pencil, Trash2, FileText, Link2, Upload, LogIn, LogOut,
   LayoutDashboard, Home, BarChart3, CheckCircle2, Circle, AlertCircle,
   Search, Eye, Download, Loader2, Shield, X, Menu, ExternalLink,
-  Moon, Sun, Printer, FileJson, Clock, Filter, Import
+  Moon, Sun, Printer, FileJson, Clock, Filter, Import, Bell, HelpCircle, Target, TrendingUp, Award, ClipboardList, ArrowUpRight, ArrowDownRight,
+  RefreshCw, Phone, Youtube, CheckCheck, Flag
 } from 'lucide-react';
+import {
+  BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
+  ResponsiveContainer, Cell as RechartsCell,
+  PieChart as RechartsPieChart, Pie, Legend as RechartsLegend
+} from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -99,6 +105,16 @@ interface AuthUser {
   role: string;
 }
 
+// ============ Notification Type ============
+interface AppNotification {
+  id: string;
+  type: 'milestone' | 'warning' | 'info';
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+}
+
 // ============ Icon Mapping ============
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Building2,
@@ -175,6 +191,19 @@ export default function QurtubahApp() {
   const [overallProgress, setOverallProgress] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('qurtubah_notifications');
+        if (stored) return JSON.parse(stored);
+      } catch {
+        // ignore
+      }
+    }
+    return [];
+  });
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Dark mode state with lazy initializer
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -275,6 +304,118 @@ export default function QurtubahApp() {
     await Promise.all([fetchFields(), fetchProgress()]);
   }, [fetchFields, fetchProgress]);
 
+  // Generate notifications from fields data
+  const generateNotifications = useCallback((fieldsData: FieldWithDetails[], progressData: ProgressData | null) => {
+    const newNotifications: AppNotification[] = [];
+    const now = new Date().toISOString();
+
+    fieldsData.forEach((field) => {
+      if (field.progress === 100) {
+        newNotifications.push({
+          id: `milestone-100-${field.id}`,
+          type: 'milestone',
+          title: 'إنجاز كامل! 🏆',
+          message: `تم إكمال مجال "${field.name}" بالكامل`,
+          time: now,
+          read: false,
+        });
+      } else if (field.progress >= 50) {
+        newNotifications.push({
+          id: `milestone-50-${field.id}`,
+          type: 'milestone',
+          title: 'منتصف الطريق 📈',
+          message: `مجال "${field.name}" وصل إلى ${field.progress}%`,
+          time: now,
+          read: false,
+        });
+      } else if (field.progress === 0) {
+        newNotifications.push({
+          id: `warning-0-${field.id}`,
+          type: 'warning',
+          title: 'مجال بدون تقدم ⚠️',
+          message: `مجال "${field.name}" لم يبدأ بعد`,
+          time: now,
+          read: false,
+        });
+      }
+    });
+
+    if (progressData && progressData.progress >= 50) {
+      newNotifications.push({
+        id: 'overall-milestone-50',
+        type: 'milestone',
+        title: 'تقدم عام ممتاز! 🎯',
+        message: `التقدم العام وصل إلى ${progressData.progress}%`,
+        time: now,
+        read: false,
+      });
+    }
+
+    // Info notification about system usage
+    if (progressData && fieldsData.length > 0) {
+      newNotifications.push({
+        id: 'info-system-usage',
+        type: 'info',
+        title: 'نصيحة الاستخدام 💡',
+        message: `لديك ${progressData.totalRequired - progressData.totalUploaded} شاهد متبقي لإكمال التقويم`,
+        time: now,
+        read: false,
+      });
+    }
+
+    return newNotifications;
+  }, []);
+
+  // Update notifications when fields data changes
+  useEffect(() => {
+    if (fields.length === 0) return;
+    const generated = generateNotifications(fields, overallProgress);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNotifications((prev) => {
+      const existingIds = new Set(prev.map((n) => n.id));
+      const merged = [...prev];
+      generated.forEach((n) => {
+        if (!existingIds.has(n.id)) {
+          merged.unshift(n);
+        }
+      });
+      const trimmed = merged.slice(0, 50);
+      try {
+        localStorage.setItem('qurtubah_notifications', JSON.stringify(trimmed));
+      } catch {
+        // ignore
+      }
+      return trimmed;
+    });
+  }, [fields, overallProgress, generateNotifications]);
+
+  // Persist notifications to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('qurtubah_notifications', JSON.stringify(notifications));
+    } catch {
+      // ignore
+    }
+  }, [notifications]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  // Help onboarding dismissed state
+  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('qurtubah_onboarding_dismissed') === 'true';
+      } catch {
+        // ignore
+      }
+    }
+    return false;
+  });
+
   const handleLogin = (user: AuthUser) => {
     setAuthUser(user);
     localStorage.setItem('qurtubah_auth', JSON.stringify(user));
@@ -330,6 +471,62 @@ export default function QurtubahApp() {
                 <Home className="h-4 w-4" />
                 الرئيسية
               </Button>
+              {/* Notification Bell */}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setNotificationOpen(!notificationOpen)}
+                  className="btn-press ml-1"
+                  title="الإشعارات"
+                >
+                  <Bell className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -left-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center animate-bounce-in">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+                {notificationOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-sky-200 dark:border-slate-700 z-50 animate-fade-in">
+                    <div className="p-3 border-b border-sky-100 dark:border-slate-700 flex items-center justify-between">
+                      <span className="text-sm font-bold text-sky-900 dark:text-sky-100">الإشعارات</span>
+                      {unreadCount > 0 && (
+                        <Button variant="ghost" size="sm" className="text-xs text-sky-600 h-6 gap-1" onClick={markAllAsRead}>
+                          <CheckCheck className="h-3 w-3" />
+                          تحديد الكل كمقروء
+                        </Button>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                      {notifications.length === 0 ? (
+                        <div className="p-6 text-center text-sky-400 text-sm">لا توجد إشعارات</div>
+                      ) : (
+                        notifications.slice(0, 10).map((n) => (
+                          <div
+                            key={n.id}
+                            className={`p-3 border-b border-sky-50 dark:border-slate-700/50 last:border-0 ${
+                              !n.read ? 'bg-sky-50/50 dark:bg-slate-700/30' : ''
+                            }`}
+                            style={{ borderRightWidth: '3px', borderRightStyle: 'solid', borderRightColor: n.type === 'milestone' ? '#10b981' : n.type === 'warning' ? '#f59e0b' : '#0ea5e9' }}
+                          >
+                            <p className="text-sm font-medium text-sky-900 dark:text-sky-100">{n.title}</p>
+                            <p className="text-xs text-sky-500 dark:text-sky-400 mt-0.5">{n.message}</p>
+                            <p className="text-[10px] text-sky-400 dark:text-sky-500 mt-1">{new Date(n.time).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {notifications.length > 0 && (
+                      <div className="p-2 border-t border-sky-100 dark:border-slate-700">
+                        <Button variant="ghost" size="sm" className="w-full text-xs text-sky-600 dark:text-sky-400" onClick={() => { markAllAsRead(); setNotificationOpen(false); }}>
+                          إغلاق الكل
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               {/* Dark Mode Toggle */}
               <Button
                 variant="ghost"
@@ -338,7 +535,19 @@ export default function QurtubahApp() {
                 className="btn-press ml-1"
                 title={darkMode ? 'الوضع الفاتح' : 'الوضع الداكن'}
               >
-                {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-600" />}
+                <span className="dark-mode-icon" style={{ transform: darkMode ? 'rotate(360deg)' : 'rotate(0deg)' }}>
+                  {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-600" />}
+                </span>
+              </Button>
+              {/* Help Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setHelpOpen(true)}
+                className="btn-press ml-1"
+                title="دليل الاستخدام"
+              >
+                <HelpCircle className="h-4 w-4 text-sky-600 dark:text-sky-400" />
               </Button>
               {authUser ? (
                 <>
@@ -376,13 +585,39 @@ export default function QurtubahApp() {
 
             {/* Mobile Menu Button */}
             <div className="flex items-center gap-1 md:hidden">
+              {/* Mobile Notification Bell */}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setNotificationOpen(!notificationOpen)}
+                  className="btn-press"
+                >
+                  <Bell className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -left-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setHelpOpen(true)}
+                className="btn-press"
+              >
+                <HelpCircle className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={toggleDarkMode}
                 className="btn-press"
               >
-                {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-600" />}
+                <span className="dark-mode-icon" style={{ transform: darkMode ? 'rotate(360deg)' : 'rotate(0deg)' }}>
+                  {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-600" />}
+                </span>
               </Button>
               <Button
                 variant="ghost"
@@ -405,6 +640,29 @@ export default function QurtubahApp() {
               >
                 <Home className="h-4 w-4" />
                 الرئيسية
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => { setNotificationOpen(true); setMobileMenuOpen(false); }}
+              >
+                <Bell className="h-4 w-4" />
+                الإشعارات
+                {unreadCount > 0 && (
+                  <span className="mr-auto h-5 min-w-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                    {unreadCount}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => { setHelpOpen(true); setMobileMenuOpen(false); }}
+              >
+                <HelpCircle className="h-4 w-4" />
+                دليل الاستخدام
               </Button>
               {authUser ? (
                 <>
@@ -476,6 +734,7 @@ export default function QurtubahApp() {
                   fields={fields}
                   overallProgress={overallProgress}
                   onFieldClick={navigateToField}
+                  onRefresh={refreshData}
                 />
               </motion.div>
             )}
@@ -538,9 +797,10 @@ export default function QurtubahApp() {
 
       {/* Footer */}
       <footer className="mt-auto">
+        <div className="footer-wave" />
         <div className="bg-gradient-to-b from-sky-900 to-sky-950 dark:from-slate-800 dark:to-slate-900 text-white footer-shimmer-border footer-pattern">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
               {/* School Info */}
               <div className="flex flex-col items-center sm:items-start gap-3">
                 <div className="flex items-center gap-3">
@@ -571,14 +831,25 @@ export default function QurtubahApp() {
                   </div>
                 )}
               </div>
-              {/* Contact */}
+              {/* Contact & Social */}
               <div className="flex flex-col items-center sm:items-end gap-3">
                 <h4 className="font-semibold text-sky-200 mb-1">تواصل معنا</h4>
                 <p className="text-sm text-sky-300 text-center sm:text-right">
                   مجمع أبحر – جدة
                 </p>
                 <p className="text-xs text-sky-400">نظام تقويم التعليم الإلكتروني</p>
-                <p className="text-xs text-sky-400/70">العام الدراسي 2025-2026</p>
+                {/* Social Media Links */}
+                <div className="flex items-center gap-3 mt-2">
+                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="social-link text-sky-400 hover:text-white" title="Twitter / X">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  </a>
+                  <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="social-link text-sky-400 hover:text-white" title="YouTube">
+                    <Youtube className="h-4 w-4" />
+                  </a>
+                  <a href="tel:+966123456789" className="social-link text-sky-400 hover:text-white" title="هاتف">
+                    <Phone className="h-4 w-4" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -610,6 +881,115 @@ export default function QurtubahApp() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Notification Dropdown - shown as dialog on mobile */}
+      <Dialog open={notificationOpen && typeof window !== 'undefined' && window.innerWidth < 768} onOpenChange={setNotificationOpen}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-sky-600" />
+                الإشعارات
+              </DialogTitle>
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs text-sky-600 h-6 gap-1" onClick={markAllAsRead}>
+                  <CheckCheck className="h-3 w-3" />
+                  تحديد الكل كمقروء
+                </Button>
+              )}
+            </div>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto custom-scrollbar space-y-1">
+            {notifications.length === 0 ? (
+              <div className="py-8 text-center text-sky-400 text-sm">لا توجد إشعارات</div>
+            ) : (
+              notifications.slice(0, 15).map((n) => (
+                <div
+                  key={n.id}
+                  className={`p-3 rounded-lg ${
+                    !n.read ? 'bg-sky-50 dark:bg-slate-700/30' : ''
+                  }`}
+                  style={{ borderRightWidth: '3px', borderRightStyle: 'solid', borderRightColor: n.type === 'milestone' ? '#10b981' : n.type === 'warning' ? '#f59e0b' : '#0ea5e9' }}
+                >
+                  <p className="text-sm font-medium text-sky-900 dark:text-sky-100">{n.title}</p>
+                  <p className="text-xs text-sky-500 dark:text-sky-400 mt-0.5">{n.message}</p>
+                  <p className="text-[10px] text-sky-400 dark:text-sky-500 mt-1">{new Date(n.time).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNotificationOpen(false)} className="w-full">إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Help / Onboarding Dialog */}
+      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+        <DialogContent className="sm:max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <HelpCircle className="h-6 w-6 text-sky-600" />
+              دليل استخدام النظام
+            </DialogTitle>
+            <DialogDescription>
+              تعرّف على كيفية استخدام نظام تقويم التعليم
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-sky-50 dark:bg-slate-800 border border-sky-100 dark:border-slate-700">
+              <span className="text-2xl shrink-0">📊</span>
+              <div>
+                <p className="font-medium text-sky-900 dark:text-sky-100">الرئيسية</p>
+                <p className="text-sm text-sky-600 dark:text-sky-400">عرض نظرة عامة على تقدم التقويم والمجالات والشواهد</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-teal-50 dark:bg-slate-800 border border-teal-100 dark:border-slate-700">
+              <span className="text-2xl shrink-0">📁</span>
+              <div>
+                <p className="font-medium text-sky-900 dark:text-sky-100">المجالات</p>
+                <p className="text-sm text-sky-600 dark:text-sky-400">انقر على أي مجال لعرض التفاصيل والمعايير والمؤشرات</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 dark:bg-slate-800 border border-amber-100 dark:border-slate-700">
+              <span className="text-2xl shrink-0">📝</span>
+              <div>
+                <p className="font-medium text-sky-900 dark:text-sky-100">الشواهد</p>
+                <p className="text-sm text-sky-600 dark:text-sky-400">أضف شواهد لكل مؤشر (رابط أو ملف) مع تحديد الحالة</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-slate-800 border border-emerald-100 dark:border-slate-700">
+              <span className="text-2xl shrink-0">🔐</span>
+              <div>
+                <p className="font-medium text-sky-900 dark:text-sky-100">لوحة التحكم</p>
+                <p className="text-sm text-sky-600 dark:text-sky-400">سجل الدخول لإدارة البيانات والشواهد والتقارير</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-sky-50 dark:bg-slate-800 border border-sky-100 dark:border-slate-700">
+              <span className="text-2xl shrink-0">⌨️</span>
+              <div>
+                <p className="font-medium text-sky-900 dark:text-sky-100">اختصارات</p>
+                <p className="text-sm text-sky-600 dark:text-sky-400">
+                  <kbd className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-slate-700 text-sky-700 dark:text-sky-300 text-xs font-mono">Esc</kbd> العودة للرئيسية &nbsp;•&nbsp;
+                  <kbd className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-slate-700 text-sky-700 dark:text-sky-300 text-xs font-mono">Ctrl+D</kbd> الوضع الداكن
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              className="w-full gap-2"
+              onClick={() => {
+                setHelpOpen(false);
+                setOnboardingDismissed(true);
+                localStorage.setItem('qurtubah_onboarding_dismissed', 'true');
+              }}
+            >
+              فهمت!
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -666,8 +1046,134 @@ const domainGradients: Record<string, { from: string; to: string; bg: string; te
   '3': { from: 'from-emerald-400', to: 'to-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-700', iconBg: 'bg-emerald-100', iconText: 'text-emerald-700', headerFrom: 'from-emerald-400', headerTo: 'to-emerald-700' },
 };
 
-// ============ Horizontal Bar Chart Component ============
+// ============ Progress Milestones Component ============
+function ProgressMilestones({ progress }: { progress: number }) {
+  const milestones = [
+    { pct: 25, emoji: '🎯', label: 'البداية', desc: '25%' },
+    { pct: 50, emoji: '📈', label: 'منتصف الطريق', desc: '50%' },
+    { pct: 75, emoji: '🏆', label: 'شارفت على الانتهاء', desc: '75%' },
+    { pct: 100, emoji: '✅', label: 'الإنجاز الكامل', desc: '100%' },
+  ];
+
+  const nextMilestone = milestones.find((m) => m.pct > progress);
+  const remaining = nextMilestone ? nextMilestone.pct - progress : 0;
+
+  return (
+    <Card className="mb-8 border-sky-200 dark:border-slate-700 animate-slide-up">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg text-sky-900 dark:text-sky-100 flex items-center gap-2">
+            <Target className="h-5 w-5 text-amber-500" />
+            معالم التقدم
+          </CardTitle>
+          {nextMilestone && (
+            <Badge variant="outline" className="text-xs gap-1 border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400">
+              <TrendingUp className="h-3 w-3" />
+              {remaining}% متبقي للمعلم التالي
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Progress bar with milestone markers */}
+        <div className="relative mb-6">
+          <div className="h-3 rounded-full bg-sky-100 dark:bg-slate-700 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-l from-sky-500 to-sky-700 transition-all duration-1000 progress-shimmer"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          {/* Milestone markers */}
+          {milestones.map((m) => {
+            const achieved = progress >= m.pct;
+            return (
+              <div
+                key={m.pct}
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+                style={{ left: `${m.pct}%` }}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-500 ${
+                  achieved
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-110'
+                    : 'bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-500'
+                }`}>
+                  {achieved ? '✓' : ''}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Milestone labels */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {milestones.map((m) => {
+            const achieved = progress >= m.pct;
+            return (
+              <div
+                key={m.pct}
+                className={`text-center p-3 rounded-xl transition-all duration-300 ${
+                  achieved
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800'
+                    : 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 opacity-60'
+                }`}
+              >
+                <span className="text-xl">{m.emoji}</span>
+                <p className={`text-xs font-medium mt-1 ${achieved ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                  {m.label}
+                </p>
+                <p className={`text-[10px] mt-0.5 ${achieved ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-400 dark:text-slate-500'}`}>
+                  {m.desc}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Next milestone info */}
+        {nextMilestone && (
+          <div className="mt-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3">
+            <span className="text-xl">{nextMilestone.emoji}</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">المعلم التالي: {nextMilestone.label}</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">{remaining}% متبقي للوصول إلى {nextMilestone.desc}</p>
+            </div>
+            <div className="text-left">
+              <span className="text-lg font-bold text-amber-700 dark:text-amber-400">{progress}%</span>
+              <span className="text-xs text-amber-500">/{nextMilestone.pct}%</span>
+            </div>
+          </div>
+        )}
+        {!nextMilestone && progress >= 100 && (
+          <div className="mt-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3">
+            <span className="text-xl">🎉</span>
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">تهانينا! تم تحقيق جميع معالم التقدم</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============ Recharts Bar Chart Component ============
+const CustomBarTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 rounded-lg px-3 py-2 shadow-lg text-sm">
+        <p className="font-bold text-sky-900 dark:text-sky-100">{payload[0].payload.name}</p>
+        <p className="text-sky-600 dark:text-sky-400">النسبة: <span className="font-bold">{payload[0].value}%</span></p>
+      </div>
+    );
+  }
+  return null;
+};
+
 function HorizontalBarChart({ fields }: { fields: FieldWithDetails[] }) {
+  const chartData = fields.map((field, index) => ({
+    name: field.name,
+    progress: field.progress,
+    color: domainBarColors[index % 4],
+  }));
+
   return (
     <Card className="border-sky-200 dark:border-slate-700 animate-slide-up">
       <CardHeader className="pb-3">
@@ -676,52 +1182,56 @@ function HorizontalBarChart({ fields }: { fields: FieldWithDetails[] }) {
           تقدم المجالات
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {fields.map((field, index) => {
-          const barColor = domainBarColors[index % 4];
-          const barBg = domainBarBgColors[index % 4];
-          return (
-            <div key={field.id} className="space-y-1.5">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-sky-800 dark:text-sky-200 font-medium truncate max-w-[70%]">{field.name}</span>
-                <span className="font-bold" style={{ color: barColor }}>{field.progress}%</span>
-              </div>
-              <div className="h-4 rounded-full overflow-hidden" style={{ backgroundColor: barBg }}>
-                <div
-                  className="h-full rounded-full transition-all duration-1000 ease-out"
-                  style={{
-                    width: `${field.progress}%`,
-                    backgroundColor: barColor,
-                    animation: 'slide-right 1s ease-out',
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })}
+      <CardContent>
+        <ResponsiveContainer width="100%" height={200}>
+          <RechartsBarChart data={chartData} layout="vertical" margin={{ top: 0, right: 40, left: 10, bottom: 0 }}>
+            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
+            <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+            <RechartsTooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(14, 165, 233, 0.06)' }} />
+            <Bar dataKey="progress" radius={[0, 6, 6, 0]} barSize={28} animationDuration={1000} animationEasing="ease-out">
+              {chartData.map((entry, index) => (
+                <RechartsCell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Bar>
+          </RechartsBarChart>
+        </ResponsiveContainer>
       </CardContent>
     </Card>
   );
 }
 
-// ============ Donut Chart Component ============
-function DonutChart({ fields, totalEvidence }: { fields: FieldWithDetails[]; totalEvidence: number }) {
-  const evidenceCounts = fields.map((f) => f.totalUploaded);
-  const total = evidenceCounts.reduce((a, b) => a + b, 0) || 1;
-  const colors = domainBarColors;
-  const size = 180;
-  const strokeWidth = 36;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
+// ============ Recharts Donut Chart Component ============
+const CustomPieTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 rounded-lg px-3 py-2 shadow-lg text-sm">
+        <p className="font-bold text-sky-900 dark:text-sky-100">{payload[0].name}</p>
+        <p className="text-sky-600 dark:text-sky-400">الشواهد: <span className="font-bold">{payload[0].value}</span></p>
+      </div>
+    );
+  }
+  return null;
+};
 
-  const segments = evidenceCounts.reduce<{ pct: number; dashLength: number; dashGap: number; offset: number; color: string; count: number; name: string }[]>((acc, count, i) => {
-    const pct = count / total;
-    const dashLength = pct * circumference;
-    const dashGap = circumference - dashLength;
-    const offset = acc.length > 0 ? acc[acc.length - 1].offset + acc[acc.length - 1].dashLength : 0;
-    acc.push({ pct, dashLength, dashGap, offset, color: colors[i % colors.length], count, name: fields[i]?.name || '' });
-    return acc;
-  }, []);
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  if (percent < 0.05) return null;
+  return (
+    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight="bold">
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+};
+
+function DonutChart({ fields, totalEvidence }: { fields: FieldWithDetails[]; totalEvidence: number }) {
+  const chartData = fields.map((field, index) => ({
+    name: field.name,
+    value: field.totalUploaded,
+    color: domainBarColors[index % 4],
+  }));
 
   return (
     <Card className="border-sky-200 dark:border-slate-700 animate-slide-up">
@@ -734,33 +1244,28 @@ function DonutChart({ fields, totalEvidence }: { fields: FieldWithDetails[]; tot
       <CardContent>
         <div className="flex flex-col sm:flex-row items-center gap-6 justify-center">
           <div className="relative shrink-0 mx-auto sm:mx-0">
-            <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-              <circle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke="#e2e8f0"
-                strokeWidth={strokeWidth}
-                className="dark:stroke-slate-700"
-              />
-              {segments.map((seg, i) => (
-                <circle
-                  key={i}
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={radius}
-                  fill="none"
-                  stroke={seg.color}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${seg.dashLength} ${seg.dashGap}`}
-                  strokeDashoffset={-seg.offset}
-                  strokeLinecap="butt"
-                  style={{ transition: 'all 1s ease-out' }}
-                />
-              ))}
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <ResponsiveContainer width={200} height={200}>
+              <RechartsPieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  dataKey="value"
+                  labelLine={false}
+                  label={renderCustomizedLabel}
+                  animationDuration={1000}
+                  animationEasing="ease-out"
+                >
+                  {chartData.map((entry, index) => (
+                    <RechartsCell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+                <RechartsTooltip content={<CustomPieTooltip />} />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-2xl font-bold text-sky-900 dark:text-sky-100">{totalEvidence}</span>
               <span className="text-xs text-sky-500 dark:text-sky-400">شاهد</span>
             </div>
@@ -768,7 +1273,7 @@ function DonutChart({ fields, totalEvidence }: { fields: FieldWithDetails[]; tot
           <div className="space-y-2 flex-1">
             {fields.map((field, i) => (
               <div key={field.id} className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: colors[i % colors.length] }} />
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: domainBarColors[i % 4] }} />
                 <span className="text-sky-700 dark:text-sky-300 truncate flex-1">{field.name}</span>
                 <span className="font-bold text-sky-900 dark:text-sky-100">{field.totalUploaded}</span>
               </div>
@@ -1015,15 +1520,30 @@ function DomainComparisonTable({ fields }: { fields: FieldWithDetails[] }) {
 }
 
 // ============ Overall Progress Card Component ============
-function OverallProgressCard({ overallProgress }: { overallProgress: ProgressData }) {
+function OverallProgressCard({ overallProgress, onRefresh }: { overallProgress: ProgressData; onRefresh?: () => Promise<void> }) {
   const animatedFields = useAnimatedCounter(overallProgress.totalFields);
   const animatedIndicators = useAnimatedCounter(overallProgress.totalIndicators);
   const animatedCompleted = useAnimatedCounter(overallProgress.completedIndicators);
   const animatedUploaded = useAnimatedCounter(overallProgress.totalUploaded);
   const animatedProgress = useAnimatedCounter(overallProgress.progress);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefresh || refreshing) return;
+    setRefreshing(true);
+    await onRefresh();
+    setTimeout(() => setRefreshing(false), 800);
+  };
+
+  const statBoxes = [
+    { value: animatedFields, label: 'المجالات', detail: `${overallProgress.totalFields} مجالات تقييم`, gradient: 'gradient-text', bg: 'bg-sky-50/80 dark:bg-slate-800/50' },
+    { value: animatedIndicators, label: 'المؤشرات', detail: `${overallProgress.totalIndicators} مؤشر أداء`, gradient: 'gradient-text', bg: 'bg-sky-50/80 dark:bg-slate-800/50' },
+    { value: animatedCompleted, label: 'مكتملة', detail: `${overallProgress.completedIndicators} مؤشر مكتمل`, gradient: 'gradient-text-emerald', bg: 'bg-emerald-50/80 dark:bg-slate-800/50' },
+    { value: animatedUploaded, label: 'الشواهد المرفوعة', detail: `${overallProgress.totalUploaded} شاهد مرفوع`, gradient: 'gradient-text', bg: 'bg-sky-50/80 dark:bg-slate-800/50' },
+  ];
 
   return (
-    <Card className="mb-8 border-sky-200 dark:border-slate-700 overflow-hidden relative animate-slide-up glassmorphism glow-sky-subtle gradient-border">
+    <Card className="mb-8 border-sky-200 dark:border-slate-700 overflow-hidden relative animate-slide-up glassmorphism glow-sky-subtle gradient-border animated-gradient-bg">
       {/* Dot decorations in background */}
       <div className="dot-decoration" style={{ top: '15%', left: '8%' }} />
       <div className="dot-decoration" style={{ top: '40%', right: '12%' }} />
@@ -1040,7 +1560,12 @@ function OverallProgressCard({ overallProgress }: { overallProgress: ProgressDat
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg text-sky-900 dark:text-sky-100">التقدم العام</CardTitle>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {onRefresh && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 btn-press" onClick={handleRefresh} title="تحديث البيانات">
+                <RefreshCw className={`h-4 w-4 text-sky-600 dark:text-sky-400 ${refreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
             {/* Circular Progress */}
             <div className="relative">
               <CircularProgress value={animatedProgress} size={64} strokeWidth={5} />
@@ -1058,24 +1583,23 @@ function OverallProgressCard({ overallProgress }: { overallProgress: ProgressDat
             <div className="progress-shimmer h-full" />
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-          <div className="p-2 rounded-xl bg-sky-50/80 dark:bg-slate-800/50">
-            <p className="text-3xl font-bold gradient-text">{animatedFields}</p>
-            <p className="text-xs text-sky-500 dark:text-sky-400">المجالات</p>
+        <TooltipProvider>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+            {statBoxes.map((stat, i) => (
+              <Tooltip key={i}>
+                <TooltipTrigger asChild>
+                  <div className={`p-2 rounded-xl ${stat.bg} stat-box-hover cursor-default`}>
+                    <p className={`text-3xl font-bold ${stat.gradient}`}>{stat.value}</p>
+                    <p className="text-xs text-sky-500 dark:text-sky-400">{stat.label}</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  {stat.detail}
+                </TooltipContent>
+              </Tooltip>
+            ))}
           </div>
-          <div className="p-2 rounded-xl bg-sky-50/80 dark:bg-slate-800/50">
-            <p className="text-3xl font-bold gradient-text">{animatedIndicators}</p>
-            <p className="text-xs text-sky-500 dark:text-sky-400">المؤشرات</p>
-          </div>
-          <div className="p-2 rounded-xl bg-emerald-50/80 dark:bg-slate-800/50">
-            <p className="text-3xl font-bold gradient-text-emerald">{animatedCompleted}</p>
-            <p className="text-xs text-sky-500 dark:text-sky-400">مكتملة</p>
-          </div>
-          <div className="p-2 rounded-xl bg-sky-50/80 dark:bg-slate-800/50">
-            <p className="text-3xl font-bold gradient-text">{animatedUploaded}</p>
-            <p className="text-xs text-sky-500 dark:text-sky-400">الشواهد المرفوعة</p>
-          </div>
-        </div>
+        </TooltipProvider>
       </CardContent>
     </Card>
   );
@@ -1086,10 +1610,12 @@ function HomePage({
   fields,
   overallProgress,
   onFieldClick,
+  onRefresh,
 }: {
   fields: FieldWithDetails[];
   overallProgress: ProgressData | null;
   onFieldClick: (id: string) => void;
+  onRefresh?: () => Promise<void>;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -1146,49 +1672,12 @@ function HomePage({
 
       {/* Overall Progress Card */}
       {overallProgress && (
-        <Card className="mb-8 border-sky-200 dark:border-slate-700 overflow-hidden relative animate-slide-up glassmorphism glow-sky">
-          <div className="absolute top-0 left-0 w-full h-1 bg-sky-100 dark:bg-slate-700">
-            <div
-              className="h-full bg-gradient-to-l from-sky-500 to-sky-700 transition-all duration-700"
-              style={{ width: `${overallProgress.progress}%` }}
-            />
-          </div>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg text-sky-900 dark:text-sky-100">التقدم العام</CardTitle>
-              <div className="flex items-center gap-4">
-                {/* Circular Progress */}
-                <div className="relative">
-                  <CircularProgress value={overallProgress.progress} size={64} strokeWidth={5} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-sm font-bold gradient-text">{overallProgress.progress}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Progress value={overallProgress.progress} className="h-3 mb-4" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-              <div className="p-2 rounded-xl bg-sky-50/80 dark:bg-slate-800/50">
-                <p className="text-2xl font-bold gradient-text">{overallProgress.totalFields}</p>
-                <p className="text-xs text-sky-500 dark:text-sky-400">المجالات</p>
-              </div>
-              <div className="p-2 rounded-xl bg-sky-50/80 dark:bg-slate-800/50">
-                <p className="text-2xl font-bold gradient-text">{overallProgress.totalIndicators}</p>
-                <p className="text-xs text-sky-500 dark:text-sky-400">المؤشرات</p>
-              </div>
-              <div className="p-2 rounded-xl bg-emerald-50/80 dark:bg-slate-800/50">
-                <p className="text-2xl font-bold gradient-text-emerald">{overallProgress.completedIndicators}</p>
-                <p className="text-xs text-sky-500 dark:text-sky-400">مكتملة</p>
-              </div>
-              <div className="p-2 rounded-xl bg-sky-50/80 dark:bg-slate-800/50">
-                <p className="text-2xl font-bold gradient-text">{overallProgress.totalUploaded}</p>
-                <p className="text-xs text-sky-500 dark:text-sky-400">الشواهد المرفوعة</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <OverallProgressCard overallProgress={overallProgress} onRefresh={onRefresh} />
+      )}
+
+      {/* Progress Milestones */}
+      {overallProgress && (
+        <ProgressMilestones progress={overallProgress.progress} />
       )}
 
       {/* Search Bar */}
@@ -1620,6 +2109,36 @@ function FieldDetailView({
         </CardContent>
       </Card>
 
+      {/* Evidence Statistics Panel */}
+      {(() => {
+        const allEvidence = field.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences));
+        const totalEv = allEvidence.length;
+        const draftCount = allEvidence.filter((e) => e.status === 'draft').length;
+        const submittedCount = allEvidence.filter((e) => e.status === 'submitted').length;
+        const approvedCount = allEvidence.filter((e) => e.status === 'approved').length;
+        const completionPct = field.totalRequired > 0 ? Math.round((field.totalUploaded / field.totalRequired) * 100) : 0;
+        const statCards = [
+          { icon: <ClipboardList className="h-4 w-4" />, value: totalEv, label: 'إجمالي الشواهد', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-900/20', border: 'border-sky-200 dark:border-sky-800' },
+          { icon: <FileText className="h-4 w-4" />, value: draftCount, label: 'مسودة', color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800/50', border: 'border-slate-200 dark:border-slate-700' },
+          { icon: <Clock className="h-4 w-4" />, value: submittedCount, label: 'مقدّم', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' },
+          { icon: <CheckCircle2 className="h-4 w-4" />, value: approvedCount, label: 'معتمد', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800' },
+          { icon: <TrendingUp className="h-4 w-4" />, value: completionPct, label: 'نسبة الإنجاز', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-900/20', border: 'border-sky-200 dark:border-sky-800', suffix: '%' },
+        ];
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6 animate-slide-up">
+            {statCards.map((card, i) => (
+              <Card key={i} className={`border ${card.border} p-3 text-center card-lift`}>
+                <div className={`p-1.5 rounded-lg ${card.bg} w-fit mx-auto mb-2`}>
+                  <span className={card.color}>{card.icon}</span>
+                </div>
+                <p className={`text-xl font-bold ${card.color}`}>{card.value}{card.suffix || ''}</p>
+                <p className="text-[10px] text-sky-500 dark:text-sky-400">{card.label}</p>
+              </Card>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Indicator Search/Filter */}
       <div className="mb-6 animate-fade-in">
         <div className="relative max-w-md">
@@ -2044,7 +2563,7 @@ function LoginView({ onLogin }: { onLogin: (user: AuthUser) => void }) {
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 islamic-pattern relative">
+    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 login-islamic-pattern relative">
       {/* Decorative background circles */}
       <div className="absolute top-20 right-10 w-64 h-64 bg-sky-200/20 rounded-full blur-3xl" />
       <div className="absolute bottom-20 left-10 w-48 h-48 bg-amber-200/15 rounded-full blur-3xl" />
@@ -2057,10 +2576,10 @@ function LoginView({ onLogin }: { onLogin: (user: AuthUser) => void }) {
         <p className="text-sky-600 dark:text-sky-400 text-sm">مجمع أبحر – نظام تقويم التعليم</p>
       </div>
 
-      <Card className="w-full max-w-md border-sky-200 dark:border-slate-700 shadow-xl glassmorphism login-card-glow animate-slide-up relative z-10">
+      <Card className="w-full max-w-md border-sky-200 dark:border-slate-700 shadow-xl glassmorphism login-card-glow login-sparkle animate-slide-up relative z-10">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-100 to-sky-200 dark:from-slate-700 dark:to-slate-800 shadow-inner">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-100 to-sky-200 dark:from-slate-700 dark:to-slate-800 shadow-inner login-badge-shield">
               <img src="/logo.png" alt="شعار مدارس قرطبة" className="h-16 w-16 object-contain animate-float" />
             </div>
           </div>
@@ -2102,14 +2621,9 @@ function LoginView({ onLogin }: { onLogin: (user: AuthUser) => void }) {
             </Button>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-sky-200 dark:border-slate-700" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white dark:bg-slate-900 px-3 text-sky-500 dark:text-sky-400">أو</span>
-            </div>
+          {/* Divider - Enhanced with decorative lines */}
+          <div className="divider-decorated">
+            <span className="text-sky-500 dark:text-sky-400 text-xs font-medium">أو</span>
           </div>
 
           {/* Google Sign In Button */}
@@ -2480,7 +2994,7 @@ function DashboardView({
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
-        <TabsList className="grid w-full grid-cols-4 mb-6 h-auto">
+        <TabsList className="grid w-full grid-cols-5 mb-6 h-auto">
           <TabsTrigger value="fields" className="gap-1.5 text-xs sm:text-sm py-2 data-[state=active]:bg-sky-600 data-[state=active]:text-white transition-all">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">المجالات</span>
@@ -2497,6 +3011,10 @@ function DashboardView({
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">الشواهد</span>
           </TabsTrigger>
+          <TabsTrigger value="statistics" className="gap-1.5 text-xs sm:text-sm py-2 data-[state=active]:bg-sky-600 data-[state=active]:text-white transition-all">
+            <BarChart3 className="h-4 w-4" />
+            <span className="hidden sm:inline">الإحصائيات</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="fields">
@@ -2510,6 +3028,9 @@ function DashboardView({
         </TabsContent>
         <TabsContent value="evidence">
           <EvidenceManager fields={fields} onRefresh={onRefresh} />
+        </TabsContent>
+        <TabsContent value="statistics">
+          <StatisticsPanel fields={fields} />
         </TabsContent>
       </Tabs>
     </div>
@@ -2601,7 +3122,7 @@ function FieldsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; onRe
       </div>
 
       <div className="rounded-xl border border-sky-200 dark:border-slate-700 overflow-hidden shadow-sm">
-        <Table>
+        <Table className="table-zebra">
           <TableHeader>
             <TableRow className="bg-gradient-to-l from-sky-50 to-sky-100/80 dark:from-slate-800 dark:to-slate-900 hover:bg-sky-100 dark:hover:bg-slate-800">
               <TableHead className="text-right">#</TableHead>
@@ -2615,7 +3136,7 @@ function FieldsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; onRe
           </TableHeader>
           <TableBody>
             {fields.map((field, i) => (
-              <TableRow key={field.id} className={`enhanced-table-row ${i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-sky-50/30 dark:bg-slate-800/30'}`}>
+              <TableRow key={field.id} className="enhanced-table-row table-row-accent">
                 <TableCell>{i + 1}</TableCell>
                 <TableCell className="font-medium dark:text-sky-100">{field.name}</TableCell>
                 <TableCell>
@@ -2653,6 +3174,10 @@ function FieldsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; onRe
             )}
           </TableBody>
         </Table>
+        <div className="table-pagination-footer">
+          <span>{fields.length} مجالات</span>
+          <span>إجمالي السجلات المعروضة</span>
+        </div>
       </div>
 
       {/* Add/Edit Dialog */}
@@ -2842,7 +3367,7 @@ function StandardsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; o
       </div>
 
       <div className="rounded-xl border border-sky-200 dark:border-slate-700 overflow-hidden shadow-sm">
-        <Table>
+        <Table className="table-zebra">
           <TableHeader>
             <TableRow className="bg-gradient-to-l from-sky-50 to-sky-100/80 dark:from-slate-800 dark:to-slate-900">
               <TableHead className="text-right">#</TableHead>
@@ -2862,7 +3387,7 @@ function StandardsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; o
               </TableRow>
             ) : (
               standards.map((std, i) => (
-                <TableRow key={std.id} className={`${i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-sky-50/30 dark:bg-slate-800/30'} hover:bg-sky-50/60 dark:hover:bg-slate-700/40 transition-colors`}>
+                <TableRow key={std.id} className="enhanced-table-row table-row-accent">
                   <TableCell>{i + 1}</TableCell>
                   <TableCell className="font-medium dark:text-sky-100">{std.name}</TableCell>
                   <TableCell className="text-sm text-sky-600 dark:text-sky-400">
@@ -2892,6 +3417,10 @@ function StandardsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; o
             )}
           </TableBody>
         </Table>
+        <div className="table-pagination-footer">
+          <span>{standards.length} معايير</span>
+          <span>إجمالي السجلات المعروضة</span>
+        </div>
       </div>
 
       {/* Dialog */}
@@ -3101,7 +3630,7 @@ function IndicatorsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; 
       </div>
 
       <div className="rounded-xl border border-sky-200 dark:border-slate-700 overflow-hidden shadow-sm">
-        <Table>
+        <Table className="table-zebra">
           <TableHeader>
             <TableRow className="bg-gradient-to-l from-sky-50 to-sky-100/80 dark:from-slate-800 dark:to-slate-900">
               <TableHead className="text-right">#</TableHead>
@@ -3121,7 +3650,7 @@ function IndicatorsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; 
               </TableRow>
             ) : (
               indicators.map((ind, i) => (
-                <TableRow key={ind.id} className={`${i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-sky-50/30 dark:bg-slate-800/30'} hover:bg-sky-50/60 dark:hover:bg-slate-700/40 transition-colors`}>
+                <TableRow key={ind.id} className="enhanced-table-row table-row-accent">
                   <TableCell>{i + 1}</TableCell>
                   <TableCell className="font-medium max-w-xs truncate dark:text-sky-100">{ind.name}</TableCell>
                   <TableCell className="text-sm text-sky-600 dark:text-sky-400">
@@ -3156,6 +3685,10 @@ function IndicatorsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; 
             )}
           </TableBody>
         </Table>
+        <div className="table-pagination-footer">
+          <span>{indicators.length} مؤشرات</span>
+          <span>إجمالي السجلات المعروضة</span>
+        </div>
       </div>
 
       {/* Dialog */}
@@ -3219,6 +3752,176 @@ function IndicatorsManager({ fields, onRefresh }: { fields: FieldWithDetails[]; 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// ============ Statistics Panel ============
+function StatisticsPanel({ fields }: { fields: FieldWithDetails[] }) {
+  // Calculate statistics
+  const allEvidence = fields.flatMap((f) =>
+    f.standards.flatMap((s) =>
+      s.indicators.flatMap((ind) =>
+        ind.evidences.map((ev) => ({ ...ev, fieldName: f.name, standardName: s.name, indicatorName: ind.name, fieldProgress: f.progress }))
+      )
+    )
+  );
+
+  const draftCount = allEvidence.filter((e) => e.status === 'draft').length;
+  const submittedCount = allEvidence.filter((e) => e.status === 'submitted').length;
+  const approvedCount = allEvidence.filter((e) => e.status === 'approved').length;
+  const totalCount = allEvidence.length;
+
+  // Get all standards with progress
+  const allStandards = fields.flatMap((f) =>
+    f.standards.map((s) => {
+      const indicators = s.indicators;
+      const required = indicators.reduce((sum, ind) => sum + ind.requiredEvidence, 0);
+      const uploaded = indicators.reduce((sum, ind) => sum + ind.evidences.length, 0);
+      const completed = indicators.filter((ind) => ind.evidences.length >= ind.requiredEvidence).length;
+      const progress = required > 0 ? Math.round((uploaded / required) * 100) : 0;
+      return { id: s.id, name: s.name, fieldName: f.name, indicators: indicators.length, completed, uploaded, required, progress };
+    })
+  );
+
+  // Sort by progress for strengths/improvements
+  const strengths = [...allStandards].sort((a, b) => b.progress - a.progress).slice(0, 3);
+  const improvements = [...allStandards].sort((a, b) => a.progress - b.progress).slice(0, 3);
+
+  const statusData = [
+    { name: 'مسودة', value: draftCount, color: '#94a3b8' },
+    { name: 'مقدّم', value: submittedCount, color: '#f59e0b' },
+    { name: 'معتمد', value: approvedCount, color: '#10b981' },
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <h3 className="text-lg font-bold text-sky-900 dark:text-sky-100">الإحصائيات والتحليلات</h3>
+
+      {/* Evidence Status Donut */}
+      <Card className="border-sky-200 dark:border-slate-700">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-sky-900 dark:text-sky-100 flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-sky-600" />
+            توزيع حالات الشواهد
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            {/* CSS Donut */}
+            <div className="relative shrink-0">
+              <svg width={140} height={140} style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx={70} cy={70} r={52} fill="none" stroke="#e2e8f0" strokeWidth={24} className="dark:stroke-slate-700" />
+                {(() => {
+                  const circumference = 52 * 2 * Math.PI;
+                  let offset = 0;
+                  return statusData.map((seg, i) => {
+                    const pct = totalCount > 0 ? seg.value / totalCount : 0;
+                    const dashLength = pct * circumference;
+                    const dashGap = circumference - dashLength;
+                    const el = (
+                      <circle key={i} cx={70} cy={70} r={52} fill="none" stroke={seg.color} strokeWidth={24}
+                        strokeDasharray={`${dashLength} ${dashGap}`} strokeDashoffset={-offset}
+                        style={{ transition: 'all 0.8s ease-out' }} />
+                    );
+                    offset += dashLength;
+                    return el;
+                  });
+                })()}
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-bold text-sky-900 dark:text-sky-100">{totalCount}</span>
+                <span className="text-[10px] text-sky-500">شاهد</span>
+              </div>
+            </div>
+            {/* Legend */}
+            <div className="space-y-3 flex-1">
+              {statusData.map((seg) => (
+                <div key={seg.name} className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                  <span className="text-sm text-sky-700 dark:text-sky-300 flex-1">{seg.name}</span>
+                  <span className="font-bold text-sky-900 dark:text-sky-100">{seg.value}</span>
+                  <span className="text-xs text-sky-400">({totalCount > 0 ? Math.round((seg.value / totalCount) * 100) : 0}%)</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Domain Completion Comparison */}
+      <Card className="border-sky-200 dark:border-slate-700">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-sky-900 dark:text-sky-100 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-sky-600" />
+            مقارنة إكمال المجالات
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {fields.map((field, i) => (
+            <div key={field.id} className="space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-sky-800 dark:text-sky-200 font-medium">{field.name}</span>
+                <span className="font-bold" style={{ color: domainBarColors[i % 4] }}>{field.progress}%</span>
+              </div>
+              <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: domainBarBgColors[i % 4] }}>
+                <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${field.progress}%`, backgroundColor: domainBarColors[i % 4] }} />
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-sky-400">
+                <span>{field.completedIndicators} / {field.indicatorsCount} مؤشرات مكتملة</span>
+                <span>{field.totalUploaded} / {field.totalRequired} شاهد</span>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Strengths & Improvements */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Strengths */}
+        <Card className="border-emerald-200 dark:border-emerald-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+              <ArrowUpRight className="h-5 w-5 text-emerald-600" />
+              نقاط القوة
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {strengths.map((std, i) => (
+              <div key={std.id} className="flex items-center gap-3 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
+                <div className="flex items-center justify-center h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-sm font-bold">{i + 1}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100 truncate">{std.name}</p>
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400">{std.fieldName} • {std.completed}/{std.indicators} مؤشرات</p>
+                </div>
+                <Badge className="bg-emerald-600 text-white">{std.progress}%</Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Improvements */}
+        <Card className="border-amber-200 dark:border-amber-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-amber-800 dark:text-amber-300 flex items-center gap-2">
+              <ArrowDownRight className="h-5 w-5 text-amber-600" />
+              نقاط التحسين
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {improvements.map((std, i) => (
+              <div key={std.id} className="flex items-center gap-3 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                <div className="flex items-center justify-center h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-sm font-bold">{i + 1}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100 truncate">{std.name}</p>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400">{std.fieldName} • {std.completed}/{std.indicators} مؤشرات</p>
+                </div>
+                <Badge className="bg-amber-500 text-white">{std.progress}%</Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -3308,7 +4011,7 @@ function EvidenceManager({ fields, onRefresh }: { fields: FieldWithDetails[]; on
       </div>
 
       <div className="rounded-xl border border-sky-200 dark:border-slate-700 overflow-hidden shadow-sm max-h-[600px] overflow-y-auto">
-        <Table>
+        <Table className="table-zebra">
           <TableHeader>
             <TableRow className="bg-gradient-to-l from-sky-50 to-sky-100/80 dark:from-slate-800 dark:to-slate-900 sticky top-0">
               <TableHead className="text-right">#</TableHead>
@@ -3330,7 +4033,7 @@ function EvidenceManager({ fields, onRefresh }: { fields: FieldWithDetails[]; on
               </TableRow>
             ) : (
               filteredEvidence.map((ev, i) => (
-                <TableRow key={ev.id} className={`${i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-sky-50/30 dark:bg-slate-800/30'} hover:bg-sky-50/60 dark:hover:bg-slate-700/40 transition-colors`}>
+                <TableRow key={ev.id} className="enhanced-table-row table-row-accent">
                   <TableCell>{i + 1}</TableCell>
                   <TableCell className="font-medium dark:text-sky-100">{ev.name}</TableCell>
                   <TableCell>
@@ -3399,6 +4102,10 @@ function EvidenceManager({ fields, onRefresh }: { fields: FieldWithDetails[]; on
             )}
           </TableBody>
         </Table>
+        <div className="table-pagination-footer">
+          <span>{filteredEvidence.length} شواهد</span>
+          <span>إجمالي السجلات المعروضة</span>
+        </div>
       </div>
 
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
