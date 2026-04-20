@@ -1462,6 +1462,248 @@
   justify-content: center;
 }
 
+/* ============ Task 10-b: Enhanced Styling Additions ============ */
+
+/* Login shake animation */
+.login-shake {
+  animation: shake 0.5s ease-in-out;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Timeline connector */
+.timeline-connector {
+  position: absolute;
+  right: 11px;
+  top: 24px;
+  bottom: -8px;
+  width: 2px;
+  background: linear-gradient(to bottom, #0ea5e9, #06b6d4, transparent);
+}
+.dark .timeline-connector {
+  background: linear-gradient(to bottom, #0ea5e9, #06b6d4, transparent);
+}
+
+/* Mobile menu overlay */
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Mobile menu panel (slides from left for RTL) */
+.mobile-menu-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  background: white;
+  z-index: 50;
+  animation: slide-in-right-rtl 0.3s ease-out;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+  overflow-y: auto;
+}
+.dark .mobile-menu-panel {
+  background: #0f172a;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+}
+
+/* RTL slide-in from left animation */
+@keyframes slide-in-right-rtl {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Mobile menu item staggered entrance */
+.mobile-menu-item {
+  opacity: 0;
+  animation: mobile-menu-slide 0.3s ease-out forwards;
+}
+@keyframes mobile-menu-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Progress color variants */
+.progress-color-sky > div { background: linear-gradient(90deg, #0ea5e9, #0284c7) !important; }
+.progress-color-teal > div { background: linear-gradient(90deg, #14b8a6, #0d9488) !important; }
+.progress-color-amber > div { background: linear-gradient(90deg, #f59e0b, #d97706) !important; }
+.progress-color-emerald > div { background: linear-gradient(90deg, #10b981, #059669) !important; }
+
+/* Progress animated shimmer */
+.progress-animated { position: relative; overflow: hidden; }
+.progress-animated::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: progress-shimmer-move 2s ease-in-out infinite;
+}
+
+/* Progress label inside bar */
+.progress-label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.progress-label span {
+  position: absolute;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  z-index: 1;
+}
+
+/* Progress complete pulse (golden glow at 100%) */
+.progress-complete {
+  animation: complete-pulse 2s ease-in-out infinite;
+}
+@keyframes complete-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
+}
+
+/* Sticky bottom stats bar */
+.sticky-stats-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(14, 165, 233, 0.15);
+  padding: 0.75rem 1rem;
+  animation: fade-in 0.3s ease-out;
+}
+.dark .sticky-stats-bar {
+  background: rgba(15, 23, 42, 0.9);
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Standard accordion accent bar (right side for RTL) */
+.standard-accent {
+  border-right: 3px solid transparent;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+.standard-accent.expanded {
+  background: linear-gradient(to left, rgba(14, 165, 233, 0.04), transparent);
+}
+
+/* Domain color accents for standards */
+.standard-accent-sky { border-right-color: #0ea5e9; }
+.standard-accent-teal { border-right-color: #14b8a6; }
+.standard-accent-amber { border-right-color: #f59e0b; }
+.standard-accent-emerald { border-right-color: #10b981; }
+
+/* Dark mode standard accents */
+.dark .standard-accent.expanded {
+  background: linear-gradient(to left, rgba(14, 165, 233, 0.06), transparent);
+}
+
+/* Completion badge variants */
+.completion-badge-gold {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+.completion-badge-silver {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  color: white;
+  box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
+}
+.completion-badge-bronze {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: white;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+/* Login animated gradient line under school name */
+.login-gradient-line {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #0ea5e9, #06b6d4, #0ea5e9, transparent);
+  background-size: 200% 100%;
+  animation: login-line-shimmer 3s linear infinite;
+  border-radius: 1px;
+}
+@keyframes login-line-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Shield watermark for login background */
+.login-shield-watermark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.login-shield-watermark::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 400px;
+  height: 400px;
+  transform: translate(-50%, -50%);
+  background: rgba(14, 165, 233, 0.02);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+.dark .login-shield-watermark::before {
+  background: rgba(14, 165, 233, 0.04);
+}
+
+/* Enhanced password focus ring animation */
+.login-password-focus:focus {
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2), 0 0 15px rgba(14, 165, 233, 0.1);
+  animation: focus-ring-pulse 1.5s ease-in-out infinite;
+}
+@keyframes focus-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2), 0 0 15px rgba(14, 165, 233, 0.1); }
+  50% { box-shadow: 0 0 0 5px rgba(14, 165, 233, 0.15), 0 0 20px rgba(14, 165, 233, 0.08); }
+}
+.dark .login-password-focus:focus {
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25), 0 0 15px rgba(14, 165, 233, 0.12);
+}
+
+/* Timeline item hover with shadow */
+.timeline-item-hover {
+  transition: all 0.2s ease;
+  position: relative;
+}
+.timeline-item-hover:hover {
+  background-color: rgba(14, 165, 233, 0.06);
+  box-shadow: 0 2px 12px rgba(14, 165, 233, 0.1);
+  transform: translateX(-2px);
+}
+.dark .timeline-item-hover:hover {
+  background-color: rgba(14, 165, 233, 0.1);
+  box-shadow: 0 2px 12px rgba(14, 165, 233, 0.15);
+}
+
 /* Enhanced Skeleton Shapes */
 .skeleton-circle {
   border-radius: 50%;

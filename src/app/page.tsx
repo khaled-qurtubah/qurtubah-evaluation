@@ -8,12 +8,13 @@ import {
   LayoutDashboard, Home, BarChart3, CheckCircle2, Circle, AlertCircle,
   Search, Eye, Download, Loader2, Shield, X, Menu, ExternalLink,
   Moon, Sun, Printer, FileJson, Clock, Filter, Import, Bell, HelpCircle, Target, TrendingUp, Award, ClipboardList, ArrowUpRight, ArrowDownRight,
-  RefreshCw, Phone, Youtube, CheckCheck, Flag, FileSpreadsheet
+  RefreshCw, Phone, Youtube, CheckCheck, Flag, FileSpreadsheet, MessageSquare, Trash
 } from 'lucide-react';
 import {
   BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
   ResponsiveContainer, Cell as RechartsCell,
-  PieChart as RechartsPieChart, Pie, Legend as RechartsLegend
+  PieChart as RechartsPieChart, Pie, Legend as RechartsLegend,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +43,7 @@ interface Evidence {
   filePath: string | null;
   status: string;
   priority: string;
+  comments: string | null;
   indicatorId: string;
   createdAt: string;
   updatedAt: string;
@@ -661,72 +663,103 @@ export default function QurtubahApp() {
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <div className="md:hidden border-t border-sky-100 dark:border-slate-700 py-3 space-y-2">
-              <Button
-                variant={currentView === 'home' ? 'default' : 'ghost'}
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => { navigateHome(); setMobileMenuOpen(false); }}
-              >
-                <Home className="h-4 w-4" />
-                الرئيسية
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => { setNotificationOpen(true); setMobileMenuOpen(false); }}
-              >
-                <Bell className="h-4 w-4" />
-                الإشعارات
-                {unreadCount > 0 && (
-                  <span className="mr-auto h-5 min-w-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
-                    {unreadCount}
-                  </span>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2"
-                onClick={() => { setHelpOpen(true); setMobileMenuOpen(false); }}
-              >
-                <HelpCircle className="h-4 w-4" />
-                دليل الاستخدام
-              </Button>
-              {authUser ? (
-                <>
-                  <Button
-                    variant={currentView === 'dashboard' ? 'default' : 'ghost'}
-                    size="sm"
-                    className="w-full justify-start gap-2"
-                    onClick={() => { setCurrentView('dashboard'); setMobileMenuOpen(false); }}
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    لوحة التحكم
-                  </Button>
+            <>
+              {/* Overlay */}
+              <div className="mobile-menu-overlay" onClick={() => setMobileMenuOpen(false)} />
+              {/* Panel */}
+              <div className="mobile-menu-panel p-4">
+                {/* Close button */}
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-sky-100 dark:border-slate-700">
+                  <span className="text-sm font-bold text-sky-900 dark:text-sky-100">القائمة</span>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="w-full justify-start gap-2 text-red-600 hover:text-red-700"
-                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setMobileMenuOpen(false)}
                   >
-                    <LogOut className="h-4 w-4" />
-                    تسجيل الخروج
+                    <X className="h-5 w-5" />
                   </Button>
-                </>
-              ) : (
-                <Button
-                  variant={currentView === 'login' ? 'default' : 'ghost'}
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                  onClick={() => { setCurrentView('login'); setMobileMenuOpen(false); }}
-                >
-                  <LogIn className="h-4 w-4" />
-                  تسجيل الدخول
-                </Button>
-              )}
-            </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="mobile-menu-item" style={{ animationDelay: '0.05s' }}>
+                    <Button
+                      variant={currentView === 'home' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={() => { navigateHome(); setMobileMenuOpen(false); }}
+                    >
+                      <Home className="h-4 w-4" />
+                      الرئيسية
+                    </Button>
+                  </div>
+                  <div className="mobile-menu-item" style={{ animationDelay: '0.1s' }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={() => { setNotificationOpen(true); setMobileMenuOpen(false); }}
+                    >
+                      <Bell className="h-4 w-4" />
+                      الإشعارات
+                      {unreadCount > 0 && (
+                        <span className="mr-auto h-5 min-w-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="mobile-menu-item" style={{ animationDelay: '0.15s' }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={() => { setHelpOpen(true); setMobileMenuOpen(false); }}
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                      دليل الاستخدام
+                    </Button>
+                  </div>
+                  {authUser ? (
+                    <>
+                      <div className="mobile-menu-item" style={{ animationDelay: '0.2s' }}>
+                        <Button
+                          variant={currentView === 'dashboard' ? 'default' : 'ghost'}
+                          size="sm"
+                          className="w-full justify-start gap-2"
+                          onClick={() => { setCurrentView('dashboard'); setMobileMenuOpen(false); }}
+                        >
+                          <LayoutDashboard className="h-4 w-4" />
+                          لوحة التحكم
+                        </Button>
+                      </div>
+                      <div className="mobile-menu-item" style={{ animationDelay: '0.25s' }}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start gap-2 text-red-600 hover:text-red-700"
+                          onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                        >
+                          <LogOut className="h-4 w-4" />
+                          تسجيل الخروج
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mobile-menu-item" style={{ animationDelay: '0.2s' }}>
+                      <Button
+                        variant={currentView === 'login' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-full justify-start gap-2"
+                        onClick={() => { setCurrentView('login'); setMobileMenuOpen(false); }}
+                      >
+                        <LogIn className="h-4 w-4" />
+                        تسجيل الدخول
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </header>
@@ -1500,28 +1533,37 @@ function RecentActivity({ fields, onFieldClick }: { fields: FieldWithDetails[]; 
         {/* Timeline connector */}
         <div className="absolute right-[23px] top-3 bottom-3 w-0.5 bg-sky-200/60 dark:bg-slate-700/60" />
         <div className="space-y-3">
-          {recentItems.map((item, i) => (
+          {recentItems.map((item, i) => {
+            // Find the domain index for coloring
+            const fieldIdx = fields.findIndex((f) => f.name === item.fieldName);
+            const dotColor = domainBarColors[fieldIdx >= 0 ? fieldIdx % 4 : 0];
+            return (
             <div
               key={i}
-              className="flex items-start gap-3 p-3 rounded-xl bg-sky-50/50 dark:bg-slate-800/50 hover:bg-sky-100/50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer relative"
+              className="flex items-start gap-3 p-3 rounded-xl bg-sky-50/50 dark:bg-slate-800/50 hover:bg-sky-100/50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer relative timeline-item-hover"
               onClick={() => onFieldClick(item.fieldId)}
             >
-              {/* Timeline dot */}
-              <div className="relative z-10 p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 shrink-0 mt-0.5 ring-2 ring-white dark:ring-slate-900">
-                <FileText className="h-4 w-4 text-amber-600" />
+              {/* Timeline dot - colored by domain */}
+              {!((i < recentItems.length - 1) || (showAll && i < sortedEvidence.length - 1) || (!showAll && i < 4)) && null}
+              {i < (showAll ? sortedEvidence.length - 1 : 4) && (
+                <div className="timeline-connector" style={{ right: '11px' }} />
+              )}
+              <div className="relative z-10 p-1.5 rounded-lg shrink-0 mt-0.5 ring-2 ring-white dark:ring-slate-900" style={{ backgroundColor: `${dotColor}20` }}>
+                <FileText className="h-4 w-4" style={{ color: dotColor }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sky-900 dark:text-sky-100 truncate">{item.evName}</p>
                 <p className="text-xs text-sky-500 dark:text-sky-400 truncate">{item.indName}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="outline" className="text-[10px] py-0 px-1.5">{item.fieldName}</Badge>
+                  <Badge variant="outline" className="text-[10px] py-0 px-1.5" style={{ borderColor: dotColor, color: dotColor }}>{item.fieldName}</Badge>
                   <span className="text-[10px] text-sky-400 dark:text-sky-500" title={new Date(item.evDate).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}>
                     {getRelativeTime(item.evDate)}
                   </span>
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
@@ -1696,7 +1738,7 @@ function OverallProgressCard({ overallProgress, onRefresh, fields }: { overallPr
       </CardHeader>
       <CardContent>
         <div className="relative">
-          <Progress value={overallProgress.progress} className="h-3 mb-4" />
+          <Progress value={overallProgress.progress} className="h-3 mb-4 progress-animated" />
           <div className="absolute inset-0 overflow-hidden rounded-full pointer-events-none">
             <div className="progress-shimmer h-full" />
           </div>
@@ -1865,7 +1907,7 @@ function HomePage({
                 </div>
               </CardHeader>
               <CardContent className="pt-0 relative">
-                <Progress value={field.progress} className="h-2.5 mb-3 domain-card-progress" />
+                <Progress value={field.progress} className={`h-2.5 mb-3 domain-card-progress progress-color-${['sky', 'teal', 'amber', 'emerald'][originalIndex % 4]} progress-animated ${field.progress === 100 ? 'progress-complete' : ''}`} />
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-4">
                     <span className={`domain-card-stats ${colors.iconBg} ${colors.text}`}>
@@ -1884,11 +1926,29 @@ function HomePage({
                       <Circle className="h-4 w-4 text-sky-300" />
                     )}
                     <span className={`font-bold ${
-                      field.progress === 100 ? 'gradient-text-emerald' :
-                      field.progress > 0 ? 'gradient-text-gold' : 'text-sky-400'
+                      field.progress === 100 ? 'gradient-text-emerald completion-badge-gold px-2 py-0.5 rounded-full text-xs' :
+                      field.progress >= 50 ? 'gradient-text-gold completion-badge-silver px-2 py-0.5 rounded-full text-xs' :
+                      field.progress > 0 ? 'gradient-text completion-badge-bronze px-2 py-0.5 rounded-full text-xs' : 'text-sky-400'
                     }`}>
                       {field.progress}%
                     </span>
+                    {/* Indicator Completion Badge */}
+                    {field.progress === 100 ? (
+                      <Badge className="bg-amber-500 text-white gap-1 text-[10px] px-1.5 py-0 shrink-0">
+                        <Trophy className="h-3 w-3" />
+                        مكتمل
+                      </Badge>
+                    ) : field.completedIndicators > 0 && (field.completedIndicators / field.indicatorsCount) >= 0.5 ? (
+                      <Badge className="bg-slate-400 text-white gap-1 text-[10px] px-1.5 py-0 shrink-0">
+                        <CheckCircle2 className="h-3 w-3" />
+                        جيد
+                      </Badge>
+                    ) : field.completedIndicators > 0 ? (
+                      <Badge className="bg-amber-700 text-white gap-1 text-[10px] px-1.5 py-0 shrink-0">
+                        <Clock className="h-3 w-3" />
+                        قيد التقدم
+                      </Badge>
+                    ) : null}
                   </div>
                 </div>
                 {/* Quick action button - visible on hover */}
@@ -2014,6 +2074,7 @@ function FieldDetailView({
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [evidenceStatus, setEvidenceStatus] = useState('draft');
   const [evidencePriority, setEvidencePriority] = useState('medium');
+  const [evidenceComments, setEvidenceComments] = useState('');
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [pdfViewerFile, setPdfViewerFile] = useState<{ name: string; url: string } | null>(null);
 
@@ -2026,6 +2087,7 @@ function FieldDetailView({
     setEvidenceFile(null);
     setEvidenceStatus('draft');
     setEvidencePriority('medium');
+    setEvidenceComments('');
     setEvidenceDialogOpen(true);
   };
 
@@ -2038,6 +2100,7 @@ function FieldDetailView({
     setEvidenceFile(null);
     setEvidenceStatus(evidence.status || 'draft');
     setEvidencePriority(evidence.priority || 'medium');
+    setEvidenceComments(evidence.comments || '');
     setEvidenceDialogOpen(true);
   };
 
@@ -2077,6 +2140,7 @@ function FieldDetailView({
             link: evidenceLink || null,
             status: evidenceStatus,
             priority: evidencePriority,
+            comments: evidenceComments || null,
             ...(filePath && { filePath, fileName }),
           }),
         });
@@ -2097,6 +2161,7 @@ function FieldDetailView({
             filePath,
             status: evidenceStatus,
             priority: evidencePriority,
+            comments: evidenceComments || null,
             indicatorId: selectedIndicatorId,
           }),
         });
@@ -2208,7 +2273,7 @@ function FieldDetailView({
           </div>
         </CardHeader>
         <CardContent className={`pt-0 bg-gradient-to-l ${domainColors.bg}/30 to-white dark:to-slate-900 relative`}>
-          <Progress value={field.progress} className="h-3 mb-3 domain-card-progress" />
+          <Progress value={field.progress} className={`h-3 mb-3 domain-card-progress progress-color-${['sky', 'teal', 'amber', 'emerald'][(field.order - 1) % 4]} progress-animated ${field.progress === 100 ? 'progress-complete' : ''}`} />
           <div className={`flex flex-wrap items-center gap-4 text-sm ${domainColors.text}`}>
             <div className="flex items-center gap-1.5 bg-white/70 dark:bg-slate-800/70 px-3 py-1 rounded-lg">
               <BarChart3 className={`h-4 w-4 ${domainColors.iconText}`} />
@@ -2379,7 +2444,7 @@ function FieldDetailView({
           const progressBg = sProgress === 100 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : sProgress >= 50 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400';
 
           return (
-            <Card key={standard.id} className={`border-sky-200 dark:border-slate-700 overflow-hidden animate-fade-in stagger-${Math.min(sIdx + 1, 8)} transition-all duration-300 ${isExpanded ? 'shadow-md' : ''}`}>
+            <Card key={standard.id} className={`border-sky-200 dark:border-slate-700 overflow-hidden animate-fade-in stagger-${Math.min(sIdx + 1, 8)} transition-all duration-300 ${isExpanded ? 'shadow-md' : ''} standard-accent standard-accent-${['sky', 'teal', 'amber', 'emerald'][sIdx % 4]} ${isExpanded ? 'expanded' : ''}`}>
               <CardHeader
                 className="cursor-pointer hover:bg-sky-50/50 dark:hover:bg-slate-800/50 transition-all duration-200 pb-3"
                 onClick={() => setExpandedStandard(isExpanded ? null : standard.id)}
@@ -2394,7 +2459,10 @@ function FieldDetailView({
                       )}
                     </div>
                     <div>
-                      <CardTitle className="text-base text-sky-900 dark:text-sky-100">{standard.name}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base text-sky-900 dark:text-sky-100">{standard.name}</CardTitle>
+                        <span className={`status-badge ${sProgress === 100 ? 'completion-badge-gold' : sProgress >= 50 ? 'completion-badge-silver' : 'completion-badge-bronze'} text-[9px] px-1.5 py-0.5 rounded-full`}>{sUploaded}/{sRequired}</span>
+                      </div>
                       <CardDescription className="text-xs text-sky-500 dark:text-sky-400">
                         {sUploaded} / {sRequired} شاهد • {sIndicators.length} مؤشرات
                       </CardDescription>
@@ -2434,7 +2502,7 @@ function FieldDetailView({
                       return (
                         <div
                           key={indicator.id}
-                          className={`p-4 rounded-xl border ${
+                          className={`p-4 rounded-xl border indicator-stagger ${
                             isComplete
                               ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20'
                               : 'border-sky-200 bg-sky-50/30 dark:border-slate-700 dark:bg-slate-800/30'
@@ -2502,6 +2570,20 @@ function FieldDetailView({
                                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${priorityColors[ev.priority] || priorityColors.medium}`}>
                                           {priorityLabels[ev.priority] || priorityLabels.medium}
                                         </span>
+                                        {ev.comments && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 shrink-0 cursor-help">
+                                                  <MessageSquare className="h-2.5 w-2.5" />
+                                                </span>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="top" className="max-w-xs text-xs" dir="rtl">
+                                                {ev.comments}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
                                       </div>
                                       {ev.description && (
                                         <p className="text-[11px] text-sky-500 dark:text-sky-400 mt-0.5 truncate">{ev.description}</p>
@@ -2649,6 +2731,17 @@ function FieldDetailView({
                 </Select>
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="evidence-comments">ملاحظات / تعليقات</Label>
+              <Textarea
+                id="evidence-comments"
+                value={evidenceComments}
+                onChange={(e) => setEvidenceComments(e.target.value)}
+                placeholder="أضف ملاحظات أو تعليقات حول الشاهد..."
+                rows={2}
+                className="resize-none"
+              />
+            </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setEvidenceDialogOpen(false)}>
@@ -2742,6 +2835,45 @@ function FieldDetailView({
       >
         <Plus className="h-6 w-6" />
       </button>
+
+      {/* Quick Stats Footer - Sticky Bottom Bar */}
+      {(() => {
+        const allDomainEvidence = field.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences));
+        const totalEv = allDomainEvidence.length;
+        const approvedEv = allDomainEvidence.filter((e) => e.status === 'approved').length;
+        const draftEv = allDomainEvidence.filter((e) => e.status === 'draft').length;
+        const completionPct = field.totalRequired > 0 ? Math.round((field.totalUploaded / field.totalRequired) * 100) : 0;
+        return (
+          <div className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-t border-sky-200/50 dark:border-slate-700/50 shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+              <div className="flex items-center justify-between gap-4 text-xs">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5 text-sky-700 dark:text-sky-300">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    <span className="font-bold">{totalEv}</span>
+                    <span className="text-sky-500 dark:text-sky-400">شاهد</span>
+                  </div>
+                  <div className="h-4 w-px bg-sky-200 dark:bg-slate-700" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{approvedEv}</span>
+                    <span className="text-sky-500 dark:text-sky-400">معتمد</span>
+                  </div>
+                  <div className="h-4 w-px bg-sky-200 dark:bg-slate-700" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">{draftEv}</span>
+                    <span className="text-sky-500 dark:text-sky-400">مسودة</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Progress value={completionPct} className="h-2 w-20" />
+                  <span className="font-bold text-sky-700 dark:text-sky-300">{completionPct}%</span>
+                  <span className="text-sky-500 dark:text-sky-400">إنجاز</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -2816,6 +2948,8 @@ function LoginView({ onLogin }: { onLogin: (user: AuthUser) => void }) {
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 login-islamic-pattern relative">
+      {/* Shield watermark */}
+      <div className="login-shield-watermark" />
       {/* Decorative background circles */}
       <div className="absolute top-20 right-10 w-64 h-64 bg-sky-200/20 rounded-full blur-3xl" />
       <div className="absolute bottom-20 left-10 w-48 h-48 bg-amber-200/15 rounded-full blur-3xl" />
@@ -2825,10 +2959,11 @@ function LoginView({ onLogin }: { onLogin: (user: AuthUser) => void }) {
         <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
           مدارس قرطبة الأهلية
         </h2>
+        <div className="login-gradient-line w-32 mx-auto mt-2 mb-2" />
         <p className="text-sky-600 dark:text-sky-400 text-sm">مجمع أبحر – نظام تقويم التعليم</p>
       </div>
 
-      <Card className="w-full max-w-md border-sky-200 dark:border-slate-700 shadow-xl glassmorphism login-card-glow login-sparkle animate-slide-up relative z-10">
+      <Card className={`w-full max-w-md border-sky-200 dark:border-slate-700 shadow-xl glassmorphism login-card-glow login-sparkle animate-slide-up relative z-10 ${error ? 'login-shake' : ''}`}>
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
             <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-100 to-sky-200 dark:from-slate-700 dark:to-slate-800 shadow-inner login-badge-shield">
@@ -2850,7 +2985,7 @@ function LoginView({ onLogin }: { onLogin: (user: AuthUser) => void }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="أدخل كلمة المرور"
-                className="text-center focus:ring-2 focus:ring-sky-300 transition-shadow dark:bg-slate-800 dark:border-slate-700"
+                className="text-center login-password-focus transition-shadow dark:bg-slate-800 dark:border-slate-700"
               />
             </div>
             {error && (
@@ -2929,6 +3064,9 @@ function DashboardView({
   onRefresh: () => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState('fields');
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   // Compute dashboard stats
   const totalStandards = fields.reduce((sum, f) => sum + f.standardsCount, 0);
@@ -2942,6 +3080,15 @@ function DashboardView({
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
+    // Calculate evidence status and priority distributions
+    const allEv = fields.flatMap((f) => f.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences)));
+    const draftCount = allEv.filter((e) => e.status === 'draft').length;
+    const submittedCount = allEv.filter((e) => e.status === 'submitted').length;
+    const approvedCount = allEv.filter((e) => e.status === 'approved').length;
+    const highPriority = allEv.filter((e) => e.priority === 'high').length;
+    const mediumPriority = allEv.filter((e) => e.priority === 'medium').length;
+    const lowPriority = allEv.filter((e) => e.priority === 'low').length;
 
     const fieldRows = fields.map((f) => `
       <tr>
@@ -2974,6 +3121,18 @@ function DashboardView({
       })
     ).join('');
 
+    // Get logo as base64 for print
+    let logoDataUri = '';
+    try {
+      const canvas = document.createElement('canvas');
+      const img = document.createElement('img');
+      img.src = '/logo.png';
+      // Use the raw path - print window can access it
+      logoDataUri = '/logo.png';
+    } catch {
+      // ignore
+    }
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -2984,6 +3143,7 @@ function DashboardView({
           body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; padding: 30px; color: #1e293b; }
           h1 { color: #0c4a6e; border-bottom: 3px solid #0ea5e9; padding-bottom: 10px; }
           h2 { color: #0369a1; margin-top: 30px; }
+          h3 { color: #0c4a6e; margin-top: 20px; }
           table { width: 100%; border-collapse: collapse; margin-top: 15px; }
           th { background: #f0f9ff; padding: 10px; border: 1px solid #e2e8f0; font-weight: bold; color: #0c4a6e; }
           .header { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
@@ -2994,12 +3154,23 @@ function DashboardView({
           .stat-box .label { font-size: 12px; color: #64748b; }
           .progress-bar { height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin: 10px 0; }
           .progress-fill { height: 100%; background: linear-gradient(90deg, #0ea5e9, #0284c7); border-radius: 10px; }
-          @media print { body { padding: 15px; } }
+          .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+          .summary-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; text-align: center; }
+          .summary-item .count { font-size: 22px; font-weight: bold; }
+          .summary-item .lbl { font-size: 11px; color: #64748b; }
+          .signature-section { margin-top: 40px; border-top: 2px solid #e2e8f0; padding-top: 20px; }
+          .signature-line { display: inline-block; width: 200px; border-bottom: 1px solid #1e293b; margin-top: 40px; }
+          @page { margin: 1.5cm; }
+          @media print {
+            body { padding: 15px; }
+            .no-print { display: none; }
+          }
+          footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 9px; color: #94a3b8; padding: 5px; }
         </style>
       </head>
       <body>
         <div class="header">
-          <img src="/logo.png" alt="شعار مدارس قرطبة" />
+          <img src="${logoDataUri}" alt="شعار مدارس قرطبة" onerror="this.style.display='none'" />
           <div>
             <h1 style="margin:0;border:none;padding:0;">تقرير تقويم التعليم</h1>
             <p style="color:#64748b;margin:5px 0;">مدارس قرطبة الأهلية – مجمع أبحر</p>
@@ -3015,6 +3186,20 @@ function DashboardView({
         </div>
 
         <div class="progress-bar"><div class="progress-fill" style="width:${overallProgress}%"></div></div>
+
+        <h2>ملخص حالات الشواهد</h2>
+        <div class="summary-grid">
+          <div class="summary-item"><div class="count" style="color:#94a3b8">${draftCount}</div><div class="lbl">مسودة</div></div>
+          <div class="summary-item"><div class="count" style="color:#f59e0b">${submittedCount}</div><div class="lbl">مقدّم</div></div>
+          <div class="summary-item"><div class="count" style="color:#10b981">${approvedCount}</div><div class="lbl">معتمد</div></div>
+        </div>
+
+        <h3>توزيع الأولويات</h3>
+        <div class="summary-grid">
+          <div class="summary-item"><div class="count" style="color:#ef4444">${highPriority}</div><div class="lbl">أولوية مرتفعة</div></div>
+          <div class="summary-item"><div class="count" style="color:#f59e0b">${mediumPriority}</div><div class="lbl">أولوية متوسطة</div></div>
+          <div class="summary-item"><div class="count" style="color:#94a3b8">${lowPriority}</div><div class="lbl">أولوية منخفضة</div></div>
+        </div>
 
         <h2>تقدم المجالات</h2>
         <table>
@@ -3046,13 +3231,24 @@ function DashboardView({
           <tbody>${standardRows}</tbody>
         </table>
 
+        <div class="signature-section">
+          <h3>تقرير مقدم من</h3>
+          <p style="color:#64748b;font-size:13px;">التاريخ: ${new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p style="color:#64748b;font-size:13px;">المسمى الوظيفي: ............................</p>
+          <p style="color:#64748b;font-size:13px;">الاسم: ............................</p>
+          <p style="margin-top:30px;">التوقيع: <span class="signature-line"></span></p>
+        </div>
+
         <div style="margin-top:30px;padding-top:15px;border-top:1px solid #e2e8f0;text-align:center;color:#94a3b8;font-size:11px;">
           نظام تقويم التعليم © ${new Date().getFullYear()} مدارس قرطبة الأهلية
         </div>
+        <footer>صفحة <span id="page-num"></span></footer>
       </body>
       </html>
     `);
     printWindow.document.close();
+    // Add page number support
+    printWindow.document.body.style.counterReset = 'page';
     setTimeout(() => printWindow.print(), 500);
   };
 
@@ -3222,13 +3418,19 @@ function DashboardView({
             <Printer className="h-4 w-4" />
             طباعة التقرير
           </Button>
+          <Button variant="destructive" size="sm" className="gap-2 btn-press" onClick={() => setResetDialogOpen(true)}>
+            <Trash className="h-4 w-4" />
+            إعادة تعيين البيانات
+          </Button>
         </div>
       </div>
 
       {/* Enhanced Dashboard Visual Summary */}
-      <Card className="mb-6 border-sky-200 dark:border-slate-700 overflow-hidden animate-slide-up">
+      <Card className="mb-6 border-sky-200 dark:border-slate-700 overflow-hidden animate-slide-up gradient-border glow-sky-subtle">
         <CardHeader className="pb-3 bg-gradient-to-l from-sky-50 to-white dark:from-slate-800 dark:to-slate-900">
-          <CardTitle className="text-lg text-sky-900 dark:text-sky-100">ملخص بصري</CardTitle>
+          <CardTitle className="text-lg text-sky-900 dark:text-sky-100 flex items-center gap-2">
+            <span className="pulsing-dot">ملخص بصري</span>
+          </CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
           <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -3249,7 +3451,7 @@ function DashboardView({
                 return (
                   <div key={field.id} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-sky-50/50 dark:bg-slate-800/50">
                     <div className="relative">
-                      <CircularProgress value={field.progress} size={52} strokeWidth={4} />
+                      <CircularProgress value={field.progress} size={60} strokeWidth={4} />
                       <div className="absolute inset-0 flex items-center justify-center">
                         <span className="text-xs font-bold" style={{ color: fColor }}>{field.progress}%</span>
                       </div>
@@ -3264,27 +3466,27 @@ function DashboardView({
 
           {/* Quick Stats with Trend */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6">
-            <div className="p-3 rounded-xl bg-sky-50 dark:bg-slate-800 text-center">
+            <div className="p-3 rounded-xl bg-sky-50 dark:bg-slate-800 text-center card-lift">
               <Building2 className="h-5 w-5 text-sky-600 mx-auto mb-1" />
               <p className="text-xl font-bold gradient-text">{fields.length}</p>
               <p className="text-[10px] text-sky-500 dark:text-sky-400">المجالات</p>
             </div>
-            <div className="p-3 rounded-xl bg-teal-50 dark:bg-slate-800 text-center">
+            <div className="p-3 rounded-xl bg-teal-50 dark:bg-slate-800 text-center card-lift">
               <GraduationCap className="h-5 w-5 text-teal-600 mx-auto mb-1" />
               <p className="text-xl font-bold gradient-text">{totalStandards}</p>
               <p className="text-[10px] text-sky-500 dark:text-sky-400">المعايير</p>
             </div>
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-slate-800 text-center">
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-slate-800 text-center card-lift">
               <BarChart3 className="h-5 w-5 text-amber-600 mx-auto mb-1" />
               <p className="text-xl font-bold gradient-text-gold">{totalIndicators}</p>
               <p className="text-[10px] text-sky-500 dark:text-sky-400">المؤشرات</p>
             </div>
-            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-slate-800 text-center">
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-slate-800 text-center card-lift">
               <CheckCircle2 className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
               <p className="text-xl font-bold gradient-text-emerald">{completedIndicators}</p>
               <p className="text-[10px] text-sky-500 dark:text-sky-400">مكتملة</p>
             </div>
-            <div className="p-3 rounded-xl bg-sky-50 dark:bg-slate-800 text-center col-span-2 sm:col-span-1">
+            <div className="p-3 rounded-xl bg-sky-50 dark:bg-slate-800 text-center col-span-2 sm:col-span-1 card-lift">
               <Trophy className="h-5 w-5 text-sky-600 mx-auto mb-1" />
               <p className="text-xl font-bold gradient-text">{overallProgress}%</p>
               <p className="text-[10px] text-sky-500 dark:text-sky-400">نسبة الإنجاز</p>
@@ -3333,6 +3535,58 @@ function DashboardView({
           <StatisticsPanel fields={fields} />
         </TabsContent>
       </Tabs>
+
+      {/* Reset Data AlertDialog */}
+      <AlertDialog open={resetDialogOpen} onOpenChange={(open) => { setResetDialogOpen(open); if (!open) setResetConfirmText(''); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-700 dark:text-red-400 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              تحذير: إعادة تعيين البيانات
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p className="text-red-600 dark:text-red-400 font-medium">
+                سيتم حذف جميع الشواهد نهائياً! لا يمكن التراجع عن هذا الإجراء.
+              </p>
+              <p>للتأكيد، اكتب <strong>تأكيد</strong> في الحقل أدناه:</p>
+              <Input
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                placeholder="اكتب تأكيد هنا"
+                className="border-red-300 dark:border-red-800 focus:border-red-500"
+                dir="rtl"
+              />
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel onClick={() => setResetConfirmText('')}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={resetConfirmText !== 'تأكيد' || resetting}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={async () => {
+                setResetting(true);
+                try {
+                  const allEvidence = fields.flatMap((f) => f.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences)));
+                  for (const ev of allEvidence) {
+                    await fetch(`/api/evidence/${ev.id}`, { method: 'DELETE' });
+                  }
+                  toast.success('تم حذف جميع الشواهد بنجاح');
+                  await onRefresh();
+                } catch {
+                  toast.error('فشل في إعادة تعيين البيانات');
+                } finally {
+                  setResetting(false);
+                  setResetDialogOpen(false);
+                  setResetConfirmText('');
+                }
+              }}
+            >
+              {resetting ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+              حذف جميع الشواهد
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -4222,6 +4476,60 @@ function StatisticsPanel({ fields }: { fields: FieldWithDetails[] }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Radar Chart - Domain Performance */}
+      <Card className="border-sky-200 dark:border-slate-700">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-sky-900 dark:text-sky-100 flex items-center gap-2">
+            <Target className="h-5 w-5 text-sky-600" />
+            أداء المجالات - رادار
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full flex justify-center">
+            <ResponsiveContainer width="100%" height={300}>
+              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={fields.map((f, i) => ({
+                domain: f.name.replace('المدرسية', '').replace('والتعلم', '').trim().substring(0, 15),
+                progress: f.progress,
+                fullMark: 100,
+              }))}>
+                <PolarGrid stroke="#e2e8f0" className="dark:stroke-slate-600" />
+                <PolarAngleAxis dataKey="domain" tick={{ fontSize: 11, fill: '#0c4a6e' }} className="dark:fill-sky-300" />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9 }} />
+                <Radar name="الإنجاز" dataKey="progress" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.2} strokeWidth={2} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Completion Trend - Required vs Uploaded */}
+      <Card className="border-sky-200 dark:border-slate-700">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-sky-900 dark:text-sky-100 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-sky-600" />
+            تحليل الفجوة - المطلوب مقابل المرفوع
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={250}>
+            <RechartsBarChart data={fields.map((f) => ({
+              name: f.name.replace('المدرسية', '').replace('والتعلم', '').trim().substring(0, 15),
+              required: f.totalRequired,
+              uploaded: f.totalUploaded,
+            }))} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <RechartsTooltip
+                contentStyle={{ direction: 'rtl', textAlign: 'right', fontFamily: 'Tajawal' }}
+                formatter={(value: number, name: string) => [value, name === 'required' ? 'المطلوب' : 'المرفوع']}
+              />
+              <Bar dataKey="required" fill="#94a3b8" name="required" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="uploaded" fill="#0ea5e9" name="uploaded" radius={[4, 4, 0, 0]} />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 }

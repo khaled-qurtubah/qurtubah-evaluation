@@ -741,3 +741,70 @@ Stage Summary:
 - Loading skeleton improved with detailed shapes matching actual content
 - Floating quick-add button for evidence in field detail view
 - All new features are touch-friendly (44px minimum targets)
+
+---
+Task ID: 10-b
+Agent: Frontend Styling Expert
+Task: Enhance styling round 7 - new CSS utilities, animations, and visual polish
+
+Work Log:
+- Added 20+ new CSS classes and keyframes to globals.css:
+  - `.login-shake` + `@keyframes shake` - shake animation for failed login
+  - `.timeline-connector` - gradient line connector between timeline items
+  - `.mobile-menu-overlay` - backdrop blur overlay for mobile menu
+  - `.mobile-menu-panel` - slide-in panel from left (RTL) for mobile navigation
+  - `.mobile-menu-item` - staggered entrance animation for menu items
+  - `.progress-color-sky/teal/amber/emerald` - gradient progress bar color variants
+  - `.progress-animated` - shimmer effect on progress bars
+  - `.progress-label` - inline percentage label inside progress bar
+  - `.progress-complete` - golden pulse at 100% completion
+  - `.sticky-stats-bar` - sticky bottom bar with backdrop blur
+  - `.standard-accent` / `.standard-accent-sky/teal/amber/emerald` - right border accent for accordion items
+  - `.standard-accent.expanded` - gradient background when expanded
+  - `.completion-badge-gold/silver/bronze` - gradient badges for completion tiers
+  - `.login-gradient-line` - animated gradient line under school name
+  - `.login-shield-watermark` - hexagonal shield watermark in login background
+  - `.login-password-focus` - pulsing ring animation on password focus
+  - `.timeline-item-hover` - hover shadow and translate on timeline items
+  - Added keyframes: shake, slide-in-right-rtl, mobile-menu-slide, complete-pulse, focus-ring-pulse, login-line-shimmer
+- Enhanced Dashboard Visual Summary:
+  - Added `gradient-border` and `glow-sky-subtle` to the visual summary card
+  - Added pulsing dot indicator next to "ملخص بصري" title
+  - Enlarged domain progress rings from 52px to 60px
+  - Added `card-lift` hover effect on all 5 quick stats grid cards
+- Enhanced Standard Accordion:
+  - Applied `standard-accent` and `standard-accent-sky/teal/amber/emerald` to each standard card
+  - Added `expanded` class for gradient background when standard is expanded
+  - Added completion badge (e.g., "3/5") next to each standard name using completion-badge-gold/silver/bronze
+  - Applied `indicator-stagger` class to indicator items for staggered entrance
+- Enhanced Login Page:
+  - Added `login-gradient-line` under the school name
+  - Added `login-shield-watermark` in the background
+  - Applied `login-password-focus` for enhanced password input focus state
+  - Applied `login-shake` conditionally when there's a login error
+- Enhanced RecentActivity:
+  - Added domain-colored dots (matching domain color) for each timeline item
+  - Applied `timeline-connector` class for gradient connecting lines
+  - Applied `timeline-item-hover` for shadow and translate on hover
+  - Domain badges now colored to match their domain
+- Enhanced Mobile Navigation:
+  - Replaced dropdown with slide-in panel from left (RTL)
+  - Added `mobile-menu-overlay` with backdrop blur
+  - Added `mobile-menu-panel` with slide-in animation
+  - Added X close button at top of panel
+  - Each menu item has staggered entrance animation (`mobile-menu-item`)
+- Enhanced Progress Bars:
+  - Applied `progress-color-sky/teal/amber/emerald` to domain card progress bars
+  - Applied `progress-animated` to main progress bars
+  - Applied `progress-complete` to 100% completion progress bars
+  - Applied `completion-badge-gold/silver/bronze` to domain card completion badges
+- ESLint: 0 errors, 0 warnings
+
+Stage Summary:
+- 7 styling enhancement areas completed
+- 20+ new CSS utilities and animations added
+- All changes support dark mode
+- No existing functionality broken
+- Mobile navigation completely redesigned with slide-in panel
+- Login page has shield watermark, gradient line, shake animation, enhanced focus
+- Standard accordion has colored accents, completion badges, staggered indicators
