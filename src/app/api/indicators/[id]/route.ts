@@ -33,7 +33,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description, order, requiredEvidence, standardId } = body;
+    const { name, description, order, requiredEvidence, standardId, notes } = body;
 
     const indicator = await db.indicator.update({
       where: { id },
@@ -43,6 +43,7 @@ export async function PUT(
         ...(order !== undefined && { order }),
         ...(requiredEvidence !== undefined && { requiredEvidence }),
         ...(standardId !== undefined && { standardId }),
+        ...(notes !== undefined && { notes }),
       },
     });
 

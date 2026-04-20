@@ -20,6 +20,7 @@ export interface Indicator {
   description: string | null;
   order: number;
   requiredEvidence: number;
+  notes: string | null;
   standardId: string;
   evidences: Evidence[];
 }

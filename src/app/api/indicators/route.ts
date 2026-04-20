@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, order, requiredEvidence, standardId } = body;
+    const { name, description, order, requiredEvidence, standardId, notes } = body;
 
     if (!name || !standardId) {
       return NextResponse.json({ error: 'Name and standardId are required' }, { status: 400 });
@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
         description: description || null,
         order: order || 0,
         requiredEvidence: requiredEvidence || 1,
+        notes: notes || null,
         standardId,
       },
     });

@@ -47,6 +47,7 @@ model Indicator {
   description    String?
   order          Int        @default(0)
   requiredEvidence Int      @default(1)
+  notes          String?
   standardId     String
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt

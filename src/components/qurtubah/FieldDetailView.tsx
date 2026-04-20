@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Building2, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, FileText, Link2, Upload,
   CheckCircle2, Circle, BarChart3, Eye, Download, Loader2, Filter, ExternalLink,
-  ClipboardList, Clock, TrendingUp, MessageSquare, X,
+  ClipboardList, Clock, TrendingUp, MessageSquare, X, StickyNote, CheckSquare, Square as SquareIcon,
+  AlertTriangle,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,11 +18,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { CircularProgress } from './CircularProgress';
 import { domainBarColors, domainGradients, iconMap, statusLabels, statusBadgeClasses, priorityLabels, priorityColors, evidencePriorityClasses } from './constants';
 import { CommentCountBadge, CommentsSection } from './CommentsSection';
 import type { Evidence, FieldWithDetails } from './types';
+
+// Priority sort order: high=0, medium=1, low=2
+const prioritySortOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+// Priority dot colors for visual indicators
+const priorityDotColors: Record<string, string> = {
+  high: 'bg-red-500',
+  medium: 'bg-amber-500',
+  low: 'bg-slate-400',
+};
 
 // ============ Field Detail View ============
 export function FieldDetailView({
@@ -47,6 +59,21 @@ export function FieldDetailView({
   const [submitting, setSubmitting] = useState(false);
   const [indicatorSearch, setIndicatorSearch] = useState('');
 
+  // Feature A: Bulk Actions State
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkStatusValue, setBulkStatusValue] = useState<string>('');
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  // Feature C: Priority Filter State
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+
+  // Feature D: Indicator Notes State
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [notesIndicatorId, setNotesIndicatorId] = useState<string | null>(null);
+  const [notesValue, setNotesValue] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
+
   // Form state
   const [evidenceName, setEvidenceName] = useState('');
   const [evidenceDescription, setEvidenceDescription] = useState('');
@@ -57,6 +84,12 @@ export function FieldDetailView({
   const [evidenceComments, setEvidenceComments] = useState('');
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [pdfViewerFile, setPdfViewerFile] = useState<{ name: string; url: string } | null>(null);
+
+  // Get all evidence in this field for bulk operations
+  const allFieldEvidence = useMemo(() =>
+    field.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences)),
+    [field]
+  );
 
   const openAddEvidence = (indicatorId: string) => {
     setSelectedIndicatorId(indicatorId);
@@ -82,6 +115,40 @@ export function FieldDetailView({
     setEvidencePriority(evidence.priority || 'medium');
     setEvidenceComments(evidence.comments || '');
     setEvidenceDialogOpen(true);
+  };
+
+  // Feature D: Open Notes Dialog
+  const openNotesDialog = (indicatorId: string) => {
+    const indicator = field.standards
+      .flatMap((s) => s.indicators)
+      .find((ind) => ind.id === indicatorId);
+    setNotesIndicatorId(indicatorId);
+    setNotesValue(indicator?.notes || '');
+    setNotesDialogOpen(true);
+  };
+
+  // Feature D: Save Notes
+  const handleSaveNotes = async () => {
+    if (!notesIndicatorId) return;
+    setNotesSaving(true);
+    try {
+      const res = await fetch(`/api/indicators/${notesIndicatorId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notesValue || null }),
+      });
+      if (res.ok) {
+        toast.success('تم حفظ الملاحظات بنجاح');
+        setNotesDialogOpen(false);
+        await onRefresh();
+      } else {
+        toast.error('فشل حفظ الملاحظات');
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء الحفظ');
+    } finally {
+      setNotesSaving(false);
+    }
   };
 
   const handleSubmitEvidence = async () => {
@@ -178,13 +245,95 @@ export function FieldDetailView({
     setDeleteConfirm(null);
   };
 
-  // Filter indicators by search
+  // Feature A: Bulk Delete Handler
+  const handleBulkDelete = async () => {
+    setBulkActionLoading(true);
+    try {
+      let successCount = 0;
+      for (const id of selectedEvidenceIds) {
+        const res = await fetch(`/api/evidence/${id}`, { method: 'DELETE' });
+        if (res.ok) successCount++;
+      }
+      toast.success(`تم حذف ${successCount} شاهد بنجاح`);
+      setSelectedEvidenceIds(new Set());
+      setBulkDeleteConfirm(false);
+      await onRefresh();
+    } catch {
+      toast.error('حدث خطأ أثناء الحذف الجماعي');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Feature A: Bulk Status Change Handler
+  const handleBulkStatusChange = async (newStatus: string) => {
+    if (!newStatus || selectedEvidenceIds.size === 0) return;
+    setBulkActionLoading(true);
+    try {
+      let successCount = 0;
+      for (const id of selectedEvidenceIds) {
+        const res = await fetch(`/api/evidence/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        if (res.ok) successCount++;
+      }
+      toast.success(`تم تحديث حالة ${successCount} شاهد`);
+      setSelectedEvidenceIds(new Set());
+      setBulkStatusValue('');
+      await onRefresh();
+    } catch {
+      toast.error('حدث خطأ أثناء تحديث الحالة');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Feature A: Toggle evidence selection
+  const toggleEvidenceSelection = (id: string) => {
+    setSelectedEvidenceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Feature A: Select/Deselect all evidence
+  const toggleSelectAll = () => {
+    if (selectedEvidenceIds.size === allFieldEvidence.length) {
+      setSelectedEvidenceIds(new Set());
+    } else {
+      setSelectedEvidenceIds(new Set(allFieldEvidence.map((e) => e.id)));
+    }
+  };
+
+  // Filter indicators by search and priority
   const filteredStandards = field.standards.map((std) => ({
     ...std,
-    indicators: std.indicators.filter((ind) =>
-      !indicatorSearch || ind.name.includes(indicatorSearch)
-    ),
+    indicators: std.indicators
+      .filter((ind) =>
+        !indicatorSearch || ind.name.includes(indicatorSearch)
+      )
+      .map((ind) => ({
+        ...ind,
+        evidences: ind.evidences
+          // Feature C: Priority filter
+          .filter((ev) =>
+            priorityFilter === 'all' || ev.priority === priorityFilter
+          )
+          // Feature C: Sort by priority (high first)
+          .sort((a, b) => (prioritySortOrder[a.priority] ?? 1) - (prioritySortOrder[b.priority] ?? 1)),
+      })),
   })).filter((std) => std.indicators.length > 0);
+
+  // Check if any evidence is selected
+  const hasSelectedEvidence = selectedEvidenceIds.size > 0;
+  const allEvidenceSelected = allFieldEvidence.length > 0 && selectedEvidenceIds.size === allFieldEvidence.length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -390,24 +539,79 @@ export function FieldDetailView({
         );
       })()}
 
-      {/* Indicator Search/Filter */}
+      {/* Indicator Search/Filter + Priority Filter (Feature C) + Bulk Select (Feature A) */}
       <div className="mb-6 animate-fade-in">
-        <div className="relative max-w-md">
-          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-400" />
-          <Input
-            value={indicatorSearch}
-            onChange={(e) => setIndicatorSearch(e.target.value)}
-            placeholder="ابحث في المؤشرات..."
-            className="pr-9 dark:bg-slate-800 dark:border-slate-700 search-glow"
-          />
-          {indicatorSearch && (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative max-w-md flex-1 min-w-[200px]">
+            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-400" />
+            <Input
+              value={indicatorSearch}
+              onChange={(e) => setIndicatorSearch(e.target.value)}
+              placeholder="ابحث في المؤشرات..."
+              className="pr-9 dark:bg-slate-800 dark:border-slate-700 search-glow"
+            />
+            {indicatorSearch && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                onClick={() => setIndicatorSearch('')}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+
+          {/* Feature C: Priority Filter Dropdown */}
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="h-9 w-auto min-w-[130px] border-sky-200 dark:border-slate-700 dark:bg-slate-800 text-xs">
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-sky-500" />
+                <SelectValue placeholder="الأولوية" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع الأولويات</SelectItem>
+              <SelectItem value="high">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  مرتفع
+                </div>
+              </SelectItem>
+              <SelectItem value="medium">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-amber-500" />
+                  متوسط
+                </div>
+              </SelectItem>
+              <SelectItem value="low">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-slate-400" />
+                  منخفض
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Feature A: Select All / Deselect All */}
+          {allFieldEvidence.length > 0 && (
             <Button
-              variant="ghost"
-              size="icon"
-              className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7"
-              onClick={() => setIndicatorSearch('')}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs h-9 border-sky-200 dark:border-slate-700"
+              onClick={toggleSelectAll}
             >
-              <X className="h-3.5 w-3.5" />
+              {allEvidenceSelected ? (
+                <>
+                  <X className="h-3.5 w-3.5" />
+                  إلغاء التحديد
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  تحديد الكل
+                </>
+              )}
             </Button>
           )}
         </div>
@@ -498,17 +702,61 @@ export function FieldDetailView({
                               <p className="text-sm font-medium text-sky-900 dark:text-sky-100 leading-relaxed">
                                 {indicator.name}
                               </p>
+                              {/* Feature D: Notes badge on indicator */}
+                              {indicator.notes && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="secondary" className="shrink-0 gap-1 text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 cursor-help">
+                                        <StickyNote className="h-2.5 w-2.5" />
+                                        ملاحظات
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs text-xs" dir="rtl">
+                                      {indicator.notes}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="shrink-0 gap-1 text-xs"
-                              onClick={() => openAddEvidence(indicator.id)}
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                              إضافة شاهد
-                            </Button>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {/* Feature D: Notes button */}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="gap-1 text-xs h-8 w-8 p-0"
+                                      onClick={() => openNotesDialog(indicator.id)}
+                                    >
+                                      <StickyNote className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" dir="rtl">
+                                    {indicator.notes ? 'تعديل الملاحظات' : 'إضافة ملاحظات'}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="shrink-0 gap-1 text-xs"
+                                onClick={() => openAddEvidence(indicator.id)}
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                إضافة شاهد
+                              </Button>
+                            </div>
                           </div>
+
+                          {/* Feature D: Show indicator notes if present */}
+                          {indicator.notes && (
+                            <div className="mb-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                              <StickyNote className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                              <span className="leading-relaxed">{indicator.notes}</span>
+                            </div>
+                          )}
 
                           <div className="flex items-center gap-3 mb-3">
                             <Progress value={indProgress} className="h-2 flex-1" />
@@ -525,8 +773,19 @@ export function FieldDetailView({
                               {indicator.evidences.map((ev) => (
                                 <div
                                   key={ev.id}
-                                  className={`evidence-card flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-sm ${evidencePriorityClasses[ev.status] || ''}`}
+                                  className={`evidence-card flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-sm ${evidencePriorityClasses[ev.status] || ''} ${selectedEvidenceIds.has(ev.id) ? 'ring-2 ring-sky-400 dark:ring-sky-500 bg-sky-50 dark:bg-slate-750' : ''}`}
                                 >
+                                  {/* Feature A: Checkbox for bulk selection */}
+                                  <Checkbox
+                                    checked={selectedEvidenceIds.has(ev.id)}
+                                    onCheckedChange={() => toggleEvidenceSelection(ev.id)}
+                                    className="shrink-0"
+                                    aria-label={`تحديد ${ev.name}`}
+                                  />
+
+                                  {/* Feature C: Priority dot indicator */}
+                                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${priorityDotColors[ev.priority] || 'bg-slate-400'}`} title={priorityLabels[ev.priority]} />
+
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
                                     {ev.filePath ? (
                                       <div className="p-1 rounded bg-red-50 dark:bg-red-900/20">
@@ -543,7 +802,7 @@ export function FieldDetailView({
                                     )}
                                     <div className="min-w-0 flex-1">
                                       <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="truncate text-sky-800 dark:text-sky-200">{ev.name}</span>
+                                        <span className={`truncate text-sky-800 dark:text-sky-200 ${ev.priority === 'high' ? 'font-bold' : ''}`}>{ev.name}</span>
                                         <span className={`${statusBadgeClasses[ev.status] || statusBadgeClasses.draft} shrink-0`}>
                                           {statusLabels[ev.status] || statusLabels.draft}
                                         </span>
@@ -625,6 +884,74 @@ export function FieldDetailView({
         )}
       </div>
 
+      {/* Feature A: Floating Bulk Action Toolbar */}
+      {hasSelectedEvidence && (
+        <div className="fixed bottom-14 left-4 right-4 sm:left-auto sm:right-8 sm:w-auto z-50 animate-slide-up">
+          <div className="bg-white dark:bg-slate-800 border border-sky-200 dark:border-slate-700 rounded-xl shadow-xl p-3 flex items-center gap-3 flex-wrap sm:flex-nowrap">
+            <Badge variant="secondary" className="gap-1.5 text-xs shrink-0 bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+              <CheckSquare className="h-3 w-3" />
+              {selectedEvidenceIds.size} محدد
+            </Badge>
+            <div className="h-6 w-px bg-sky-200 dark:bg-slate-700 hidden sm:block" />
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-1.5 text-xs shrink-0"
+              onClick={() => setBulkDeleteConfirm(true)}
+              disabled={bulkActionLoading}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              حذف المحدد
+            </Button>
+            <Select value={bulkStatusValue} onValueChange={(val) => { setBulkStatusValue(val); handleBulkStatusChange(val); }}>
+              <SelectTrigger className="h-8 w-auto min-w-[130px] text-xs border-sky-200 dark:border-slate-700">
+                <SelectValue placeholder="تغيير الحالة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">مسودة</SelectItem>
+                <SelectItem value="submitted">مقدّم</SelectItem>
+                <SelectItem value="approved">معتمد</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-xs shrink-0"
+              onClick={() => setSelectedEvidenceIds(new Set())}
+            >
+              <X className="h-3.5 w-3.5" />
+              إلغاء
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Feature A: Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              تأكيد الحذف الجماعي
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف {selectedEvidenceIds.size} شاهد محدد؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={bulkActionLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {bulkActionLoading ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+              حذف {selectedEvidenceIds.size} شاهد
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Evidence Dialog */}
       <Dialog open={evidenceDialogOpen} onOpenChange={setEvidenceDialogOpen}>
         <DialogContent className="sm:max-w-md" dir="rtl">
@@ -705,9 +1032,24 @@ export function FieldDetailView({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">منخفض</SelectItem>
-                    <SelectItem value="medium">متوسط</SelectItem>
-                    <SelectItem value="high">مرتفع</SelectItem>
+                    <SelectItem value="high">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                        مرتفع
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="medium">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-amber-500" />
+                        متوسط
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="low">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-slate-400" />
+                        منخفض
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -760,6 +1102,48 @@ export function FieldDetailView({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Feature D: Indicator Notes Dialog */}
+      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <StickyNote className="h-5 w-5 text-amber-500" />
+              ملاحظات المؤشر
+            </DialogTitle>
+            <DialogDescription>
+              أضف أو عدّل ملاحظات حول هذا المؤشر
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={notesValue}
+              onChange={(e) => setNotesValue(e.target.value)}
+              placeholder="اكتب ملاحظاتك هنا..."
+              rows={5}
+              className="resize-none dark:bg-slate-800 dark:border-slate-700"
+              dir="rtl"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setNotesDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              onClick={handleSaveNotes}
+              disabled={notesSaving}
+              className="gap-2"
+            >
+              {notesSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <StickyNote className="h-4 w-4" />
+              )}
+              حفظ الملاحظات
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* PDF Viewer Dialog */}
       <Dialog open={pdfViewerOpen} onOpenChange={setPdfViewerOpen}>
