@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// Helper to log activity
+async function logActivity(action: string, entityType: string, entityId: string, entityName: string, details?: string, userName?: string) {
+  try {
+    await db.activityLog.create({
+      data: {
+        action,
+        entityType,
+        entityId,
+        entityName,
+        details: details || null,
+        userName: userName || null,
+      },
+    });
+  } catch (error) {
+    console.error('Error logging activity:', error);
+  }
+}
+
 // Evidence API - supports status field (draft, submitted, approved)
 export async function GET(request: NextRequest) {
   try {
@@ -54,6 +72,9 @@ export async function POST(request: NextRequest) {
         indicatorId,
       },
     });
+
+    // Log activity
+    await logActivity('create', 'evidence', evidence.id, name, `تم إنشاء شاهد جديد بحالة: ${status || 'مسودة'}`);
 
     return NextResponse.json(evidence, { status: 201 });
   } catch (error) {

@@ -69,3 +69,14 @@ model Evidence {
   updatedAt   DateTime  @updatedAt
   indicator   Indicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
 }
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  action     String   // "create", "update", "delete"
+  entityType String   // "evidence", "indicator", "standard", "field"
+  entityId   String
+  entityName String
+  details    String?
+  userName   String?
+  createdAt  DateTime @default(now())
+}

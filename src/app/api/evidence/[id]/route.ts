@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// Helper to log activity
+async function logActivity(action: string, entityType: string, entityId: string, entityName: string, details?: string, userName?: string) {
+  try {
+    await db.activityLog.create({
+      data: {
+        action,
+        entityType,
+        entityId,
+        entityName,
+        details: details || null,
+        userName: userName || null,
+      },
+    });
+  } catch (error) {
+    console.error('Error logging activity:', error);
+  }
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -34,6 +52,10 @@ export async function PUT(
     const body = await request.json();
     const { name, description, link, fileName, filePath, status, priority, comments } = body;
 
+    // Get the existing evidence name for activity log
+    const existing = await db.evidence.findUnique({ where: { id } });
+    const entityName = name || existing?.name || 'شاهد';
+
     const evidence = await db.evidence.update({
       where: { id },
       data: {
@@ -48,6 +70,19 @@ export async function PUT(
       },
     });
 
+    // Log activity - build details about what changed
+    const changes: string[] = [];
+    if (name !== undefined && name !== existing?.name) changes.push('الاسم');
+    if (status !== undefined && status !== existing?.status) changes.push(`الحالة → ${status}`);
+    if (priority !== undefined && priority !== existing?.priority) changes.push(`الأهمية → ${priority}`);
+    if (comments !== undefined && comments !== existing?.comments) changes.push('التعليقات');
+    if (link !== undefined) changes.push('الرابط');
+    if (filePath !== undefined) changes.push('الملف');
+
+    const details = changes.length > 0 ? `تم تحديث: ${changes.join('، ')}` : 'تم تحديث الشاهد';
+
+    await logActivity('update', 'evidence', id, entityName, details);
+
     return NextResponse.json(evidence);
   } catch (error) {
     console.error('Error updating evidence:', error);
@@ -61,7 +96,16 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    // Get the evidence name before deletion for activity log
+    const evidence = await db.evidence.findUnique({ where: { id } });
+    const entityName = evidence?.name || 'شاهد محذوف';
+
     await db.evidence.delete({ where: { id } });
+
+    // Log activity
+    await logActivity('delete', 'evidence', id, entityName, 'تم حذف الشاهد');
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting evidence:', error);

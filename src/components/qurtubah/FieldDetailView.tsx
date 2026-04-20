@@ -1,0 +1,856 @@
+'use client';
+
+import React, { useState } from 'react';
+import {
+  Building2, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, FileText, Link2, Upload,
+  CheckCircle2, Circle, BarChart3, Eye, Download, Loader2, Filter, ExternalLink,
+  ClipboardList, Clock, TrendingUp, MessageSquare, X,
+} from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
+import { CircularProgress } from './CircularProgress';
+import { domainBarColors, domainGradients, iconMap, statusLabels, statusBadgeClasses, priorityLabels, priorityColors, evidencePriorityClasses } from './constants';
+import { CommentCountBadge, CommentsSection } from './CommentsSection';
+import type { Evidence, FieldWithDetails } from './types';
+
+// ============ Field Detail View ============
+export function FieldDetailView({
+  field,
+  fields,
+  onBack,
+  onRefresh,
+  onNavigateToField,
+}: {
+  field: FieldWithDetails;
+  fields: FieldWithDetails[];
+  onBack: () => void;
+  onRefresh: () => Promise<void>;
+  onNavigateToField?: (id: string) => void;
+}) {
+  const IconComponent = iconMap[field.icon || 'Building2'] || Building2;
+  const domainColors = domainGradients[String(field.order - 1)] || domainGradients['0'];
+  const [expandedStandard, setExpandedStandard] = useState<string | null>(null);
+  const [evidenceDialogOpen, setEvidenceDialogOpen] = useState(false);
+  const [editingEvidence, setEditingEvidence] = useState<Evidence | null>(null);
+  const [selectedIndicatorId, setSelectedIndicatorId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [indicatorSearch, setIndicatorSearch] = useState('');
+
+  // Form state
+  const [evidenceName, setEvidenceName] = useState('');
+  const [evidenceDescription, setEvidenceDescription] = useState('');
+  const [evidenceLink, setEvidenceLink] = useState('');
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [evidenceStatus, setEvidenceStatus] = useState('draft');
+  const [evidencePriority, setEvidencePriority] = useState('medium');
+  const [evidenceComments, setEvidenceComments] = useState('');
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [pdfViewerFile, setPdfViewerFile] = useState<{ name: string; url: string } | null>(null);
+
+  const openAddEvidence = (indicatorId: string) => {
+    setSelectedIndicatorId(indicatorId);
+    setEditingEvidence(null);
+    setEvidenceName('');
+    setEvidenceDescription('');
+    setEvidenceLink('');
+    setEvidenceFile(null);
+    setEvidenceStatus('draft');
+    setEvidencePriority('medium');
+    setEvidenceComments('');
+    setEvidenceDialogOpen(true);
+  };
+
+  const openEditEvidence = (evidence: Evidence) => {
+    setSelectedIndicatorId(evidence.indicatorId);
+    setEditingEvidence(evidence);
+    setEvidenceName(evidence.name);
+    setEvidenceDescription(evidence.description || '');
+    setEvidenceLink(evidence.link || '');
+    setEvidenceFile(null);
+    setEvidenceStatus(evidence.status || 'draft');
+    setEvidencePriority(evidence.priority || 'medium');
+    setEvidenceComments(evidence.comments || '');
+    setEvidenceDialogOpen(true);
+  };
+
+  const handleSubmitEvidence = async () => {
+    if (!evidenceName.trim() || !selectedIndicatorId) return;
+
+    setSubmitting(true);
+    try {
+      let filePath: string | null = null;
+      let fileName: string | null = null;
+
+      if (evidenceFile) {
+        const formData = new FormData();
+        formData.append('file', evidenceFile);
+        const uploadRes = await fetch('/api/evidence/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          filePath = uploadData.filePath;
+          fileName = uploadData.fileName;
+        } else {
+          toast.error('فشل رفع الملف');
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      if (editingEvidence) {
+        const res = await fetch(`/api/evidence/${editingEvidence.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: evidenceName,
+            description: evidenceDescription || null,
+            link: evidenceLink || null,
+            status: evidenceStatus,
+            priority: evidencePriority,
+            comments: evidenceComments || null,
+            ...(filePath && { filePath, fileName }),
+          }),
+        });
+        if (res.ok) {
+          toast.success('تم تحديث الشاهد بنجاح');
+        } else {
+          toast.error('فشل تحديث الشاهد');
+        }
+      } else {
+        const res = await fetch('/api/evidence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: evidenceName,
+            description: evidenceDescription || null,
+            link: evidenceLink || null,
+            fileName,
+            filePath,
+            status: evidenceStatus,
+            priority: evidencePriority,
+            comments: evidenceComments || null,
+            indicatorId: selectedIndicatorId,
+          }),
+        });
+        if (res.ok) {
+          toast.success('تم إضافة الشاهد بنجاح');
+        } else {
+          toast.error('فشل إضافة الشاهد');
+        }
+      }
+
+      setEvidenceDialogOpen(false);
+      await onRefresh();
+    } catch (error) {
+      console.error('Error submitting evidence:', error);
+      toast.error('حدث خطأ أثناء الحفظ');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteEvidence = async (id: string) => {
+    try {
+      const res = await fetch(`/api/evidence/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('تم حذف الشاهد بنجاح');
+        await onRefresh();
+      } else {
+        toast.error('فشل حذف الشاهد');
+      }
+    } catch (error) {
+      console.error('Error deleting evidence:', error);
+      toast.error('حدث خطأ أثناء الحذف');
+    }
+    setDeleteConfirm(null);
+  };
+
+  // Filter indicators by search
+  const filteredStandards = field.standards.map((std) => ({
+    ...std,
+    indicators: std.indicators.filter((ind) =>
+      !indicatorSearch || ind.name.includes(indicatorSearch)
+    ),
+  })).filter((std) => std.indicators.length > 0);
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center gap-2 mb-6 animate-fade-in flex-wrap">
+        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1 text-sky-600 dark:text-sky-400 btn-press">
+          <ChevronRight className="h-4 w-4" />
+          الرئيسية
+        </Button>
+        <ChevronLeft className="h-3.5 w-3.5 text-sky-400 dark:text-sky-500" />
+        <span className="text-sm font-medium text-sky-800 dark:text-sky-200">{field.name}</span>
+        {/* Domain Quick Switch Dropdown */}
+        {onNavigateToField && fields.length > 1 && (
+          <div className="mr-auto">
+            <Select
+              value={field.id}
+              onValueChange={(val) => {
+                if (val !== field.id) onNavigateToField(val);
+              }}
+            >
+              <SelectTrigger className="h-7 text-xs w-auto min-w-[140px] max-w-[200px] border-sky-200 dark:border-slate-700 dark:bg-slate-800">
+                <SelectValue placeholder="انتقل لمجال" />
+              </SelectTrigger>
+              <SelectContent>
+                {fields.map((f, fIdx) => {
+                  const fColor = domainBarColors[fIdx % 4];
+                  return (
+                    <SelectItem key={f.id} value={f.id}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: fColor }} />
+                        <span className="truncate">{f.name}</span>
+                        <span className="text-[10px] text-muted-foreground">({f.progress}%)</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
+      {/* Field Header - Hero Banner */}
+      <Card className="mb-8 border-sky-200 dark:border-slate-700 overflow-hidden animate-slide-up shadow-lg relative">
+        <div className={`h-3 bg-gradient-to-l ${domainColors.from} ${domainColors.to} relative overflow-hidden`}>
+          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 12px, rgba(255,255,255,0.3) 12px, rgba(255,255,255,0.3) 14px)' }} />
+        </div>
+        <CardHeader className={`bg-gradient-to-l ${domainColors.bg}/50 to-white dark:to-slate-900`}>
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${domainColors.iconBg} ${domainColors.iconText} domain-icon-glow`}>
+              <IconComponent className="h-8 w-8" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className={`text-2xl ${domainColors.text}`}>{field.name}</CardTitle>
+              <CardDescription className={`${domainColors.text} mt-1`}>{field.description}</CardDescription>
+            </div>
+            <div className="flex items-center gap-4">
+              {/* Circular Progress - animated on mount */}
+              <div className="relative">
+                <CircularProgress value={field.progress} size={72} strokeWidth={5} className="animate-ring" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className={`text-lg font-bold ${domainColors.text}`}>{field.progress}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className={`pt-0 bg-gradient-to-l ${domainColors.bg}/30 to-white dark:to-slate-900 relative`}>
+          <Progress value={field.progress} className={`h-3 mb-3 domain-card-progress progress-color-${['sky', 'teal', 'amber', 'emerald'][(field.order - 1) % 4]} progress-animated ${field.progress === 100 ? 'progress-complete' : ''}`} />
+          <div className={`flex flex-wrap items-center gap-4 text-sm ${domainColors.text}`}>
+            <div className="flex items-center gap-1.5 bg-white/70 dark:bg-slate-800/70 px-3 py-1 rounded-lg">
+              <BarChart3 className={`h-4 w-4 ${domainColors.iconText}`} />
+              <span>{field.standardsCount} معايير</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/70 dark:bg-slate-800/70 px-3 py-1 rounded-lg">
+              <Eye className={`h-4 w-4 ${domainColors.iconText}`} />
+              <span>{field.indicatorsCount} مؤشرات</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-slate-800/70 px-3 py-1 rounded-lg">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span>{field.completedIndicators} مؤشرات مكتملة</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/70 dark:bg-slate-800/70 px-3 py-1 rounded-lg">
+              <Upload className={`h-4 w-4 ${domainColors.iconText}`} />
+              <span>{field.totalUploaded} / {field.totalRequired} شاهد</span>
+            </div>
+          </div>
+          {/* Wave decorative SVG at bottom */}
+          <div className="wave-decoration">
+            <svg viewBox="0 0 1200 40" preserveAspectRatio="none" style={{ width: '100%', height: '20px' }}>
+              <path d="M0,20 C150,40 350,0 500,20 C650,40 850,0 1000,20 C1100,30 1150,25 1200,20 L1200,40 L0,40 Z" fill="currentColor" className="text-sky-100/30 dark:text-slate-800/30" />
+              <path d="M0,25 C200,10 400,35 600,25 C800,15 1000,35 1200,25 L1200,40 L0,40 Z" fill="currentColor" className="text-sky-100/20 dark:text-slate-800/20" />
+            </svg>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Evidence Statistics Panel - Enhanced */}
+      {(() => {
+        const allEvidence = field.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences));
+        const totalEv = allEvidence.length;
+        const draftCount = allEvidence.filter((e) => e.status === 'draft').length;
+        const submittedCount = allEvidence.filter((e) => e.status === 'submitted').length;
+        const approvedCount = allEvidence.filter((e) => e.status === 'approved').length;
+        const completionPct = field.totalRequired > 0 ? Math.round((field.totalUploaded / field.totalRequired) * 100) : 0;
+        const statCards = [
+          { icon: <ClipboardList className="h-4 w-4" />, value: totalEv, label: 'إجمالي الشواهد', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-900/20', border: 'border-sky-200 dark:border-sky-800' },
+          { icon: <FileText className="h-4 w-4" />, value: draftCount, label: 'مسودة', color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800/50', border: 'border-slate-200 dark:border-slate-700' },
+          { icon: <Clock className="h-4 w-4" />, value: submittedCount, label: 'مقدّم', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800' },
+          { icon: <CheckCircle2 className="h-4 w-4" />, value: approvedCount, label: 'معتمد', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800' },
+          { icon: <TrendingUp className="h-4 w-4" />, value: completionPct, label: 'نسبة الإنجاز', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-900/20', border: 'border-sky-200 dark:border-sky-800', suffix: '%' },
+        ];
+        return (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6 animate-slide-up">
+              {statCards.map((card, i) => (
+                <Card key={i} className={`border ${card.border} p-3 text-center card-lift stats-card-enhanced ${i === 0 ? '' : i === 1 ? '' : i === 2 ? 'accent-amber' : i === 3 ? '' : 'accent-emerald'}`}>
+                  <div className={`p-1.5 rounded-lg ${card.bg} w-fit mx-auto mb-2`}>
+                    <span className={card.color}>{card.icon}</span>
+                  </div>
+                  <p className={`text-xl font-bold ${card.color} stat-value-pop`}>{card.value}{card.suffix || ''}</p>
+                  <p className="text-[10px] text-sky-500 dark:text-sky-400">{card.label}</p>
+                </Card>
+              ))}
+            </div>
+
+            {/* Enhanced Stats: Status Distribution + Standard Completion + Quick Add */}
+            <Card className="mb-6 border-sky-200 dark:border-slate-700 overflow-hidden animate-fade-in">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base text-sky-900 dark:text-sky-100 heading-decorated">إحصائيات تفصيلية</CardTitle>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => {
+                      const firstIndicator = field.standards[0]?.indicators[0];
+                      if (firstIndicator) openAddEvidence(firstIndicator.id);
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    إضافة شاهد سريع
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Status Distribution */}
+                  <div>
+                    <p className="text-sm font-medium text-sky-800 dark:text-sky-200 mb-3 heading-decorated">توزيع حالات الشواهد</p>
+                    <div className="space-y-3">
+                      {[
+                        { key: 'draft', label: 'مسودة', count: draftCount, color: 'bg-slate-400', bgLight: 'bg-slate-100 dark:bg-slate-800' },
+                        { key: 'submitted', label: 'مقدّم', count: submittedCount, color: 'bg-amber-400', bgLight: 'bg-amber-100 dark:bg-amber-900/30' },
+                        { key: 'approved', label: 'معتمد', count: approvedCount, color: 'bg-emerald-400', bgLight: 'bg-emerald-100 dark:bg-emerald-900/30' },
+                      ].map((s) => (
+                        <div key={s.key} className="flex items-center gap-3">
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${statusBadgeClasses[s.key] || ''} ${s.bgLight}`}>
+                            {s.label}
+                          </span>
+                          <div className="flex-1 h-2.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${s.color} transition-all duration-500`}
+                              style={{ width: totalEv > 0 ? `${(s.count / totalEv) * 100}%` : '0%' }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-sky-700 dark:text-sky-300 min-w-[28px] text-left">{s.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Standard Completion Mini Progress */}
+                  <div>
+                    <p className="text-sm font-medium text-sky-800 dark:text-sky-200 mb-3 heading-decorated">تقدم المعايير</p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                      {field.standards.map((s) => {
+                        const sReq = s.indicators.reduce((sum, ind) => sum + ind.requiredEvidence, 0);
+                        const sUp = s.indicators.reduce((sum, ind) => sum + ind.evidences.length, 0);
+                        const sProg = sReq > 0 ? Math.round((sUp / sReq) * 100) : 0;
+                        return (
+                          <div key={s.id} className="flex items-center gap-2">
+                            <span className="text-[11px] text-sky-700 dark:text-sky-300 truncate min-w-0 flex-1" title={s.name}>
+                              {s.name}
+                            </span>
+                            <div className="w-20 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${sProg === 100 ? 'bg-emerald-400' : sProg >= 50 ? 'bg-amber-400' : 'bg-sky-400'}`}
+                                style={{ width: `${sProg}%` }}
+                              />
+                            </div>
+                            <span className={`text-[11px] font-medium min-w-[32px] text-left ${sProg === 100 ? 'text-emerald-600 dark:text-emerald-400' : sProg >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-sky-600 dark:text-sky-400'}`}>
+                              {sProg}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        );
+      })()}
+
+      {/* Indicator Search/Filter */}
+      <div className="mb-6 animate-fade-in">
+        <div className="relative max-w-md">
+          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sky-400" />
+          <Input
+            value={indicatorSearch}
+            onChange={(e) => setIndicatorSearch(e.target.value)}
+            placeholder="ابحث في المؤشرات..."
+            className="pr-9 dark:bg-slate-800 dark:border-slate-700 search-glow"
+          />
+          {indicatorSearch && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              onClick={() => setIndicatorSearch('')}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Standards Accordion */}
+      <div className="space-y-4">
+        {filteredStandards.map((standard, sIdx) => {
+          const sIndicators = standard.indicators;
+          const sRequired = sIndicators.reduce((sum, ind) => sum + ind.requiredEvidence, 0);
+          const sUploaded = sIndicators.reduce((sum, ind) => sum + ind.evidences.length, 0);
+          const sProgress = sRequired > 0 ? Math.round((sUploaded / sRequired) * 100) : 0;
+          const isExpanded = expandedStandard === standard.id;
+          const progressBg = sProgress === 100 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : sProgress >= 50 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400';
+
+          return (
+            <Card key={standard.id} className={`border-sky-200 dark:border-slate-700 overflow-hidden animate-fade-in stagger-${Math.min(sIdx + 1, 8)} transition-all duration-300 ${isExpanded ? 'shadow-md' : ''} standard-accent standard-accent-${['sky', 'teal', 'amber', 'emerald'][sIdx % 4]} ${isExpanded ? 'expanded' : ''}`}>
+              <CardHeader
+                className="cursor-pointer hover:bg-sky-50/50 dark:hover:bg-slate-800/50 transition-all duration-200 pb-3"
+                onClick={() => setExpandedStandard(isExpanded ? null : standard.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${progressBg} transition-colors duration-300`}>
+                      {sProgress === 100 ? (
+                        <CheckCircle2 className="h-5 w-5" />
+                      ) : (
+                        <BarChart3 className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base text-sky-900 dark:text-sky-100 heading-decorated">{standard.name}</CardTitle>
+                        <span className={`status-badge ${sProgress === 100 ? 'completion-badge-gold' : sProgress >= 50 ? 'completion-badge-silver' : 'completion-badge-bronze'} text-[9px] px-1.5 py-0.5 rounded-full`}>{sUploaded}/{sRequired}</span>
+                      </div>
+                      <CardDescription className="text-xs text-sky-500 dark:text-sky-400">
+                        {sUploaded} / {sRequired} شاهد • {sIndicators.length} مؤشرات
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {/* Visual indicator count */}
+                    <div className="hidden sm:flex items-center gap-0.5">
+                      {sIndicators.map((ind, iIdx) => (
+                        <div
+                          key={iIdx}
+                          className={`h-2.5 w-2.5 rounded-full transition-colors ${
+                            ind.evidences.length >= ind.requiredEvidence ? 'bg-emerald-400' : 'bg-sky-200 dark:bg-slate-600'
+                          }`}
+                          title={ind.name}
+                        />
+                      ))}
+                    </div>
+                    <Badge variant={sProgress === 100 ? 'default' : 'secondary'} className={`${sProgress === 100 ? 'bg-emerald-600' : sProgress >= 50 ? 'bg-amber-500' : ''} transition-colors duration-300`}>
+                      {sProgress}%
+                    </Badge>
+                    <ChevronLeft className={`h-5 w-5 text-sky-400 transition-transform duration-300 ${isExpanded ? '-rotate-90' : ''}`} />
+                  </div>
+                </div>
+                <Progress value={sProgress} className="h-1.5 mt-3" />
+              </CardHeader>
+
+              {isExpanded && (
+                <CardContent className="pt-0 border-t border-sky-100 dark:border-slate-700 animate-fade-in">
+                  <div className="space-y-4 mt-4">
+                    {sIndicators.map((indicator) => {
+                      const isComplete = indicator.evidences.length >= indicator.requiredEvidence;
+                      const indProgress = indicator.requiredEvidence > 0
+                        ? Math.min(100, Math.round((indicator.evidences.length / indicator.requiredEvidence) * 100))
+                        : 0;
+
+                      return (
+                        <div
+                          key={indicator.id}
+                          className={`p-4 rounded-xl border indicator-stagger ${
+                            isComplete
+                              ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20'
+                              : 'border-sky-200 bg-sky-50/30 dark:border-slate-700 dark:bg-slate-800/30'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="flex items-start gap-2 flex-1">
+                              {isComplete ? (
+                                <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-sky-400 mt-0.5 shrink-0" />
+                              )}
+                              <p className="text-sm font-medium text-sky-900 dark:text-sky-100 leading-relaxed">
+                                {indicator.name}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="shrink-0 gap-1 text-xs"
+                              onClick={() => openAddEvidence(indicator.id)}
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              إضافة شاهد
+                            </Button>
+                          </div>
+
+                          <div className="flex items-center gap-3 mb-3">
+                            <Progress value={indProgress} className="h-2 flex-1" />
+                            <span className={`text-xs font-bold ${
+                              isComplete ? 'text-emerald-600' : 'text-sky-600'
+                            }`}>
+                              {indicator.evidences.length} / {indicator.requiredEvidence}
+                            </span>
+                          </div>
+
+                          {/* Evidence List */}
+                          {indicator.evidences.length > 0 && (
+                            <div className="space-y-2 mt-3">
+                              {indicator.evidences.map((ev) => (
+                                <div
+                                  key={ev.id}
+                                  className={`evidence-card flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-sm ${evidencePriorityClasses[ev.status] || ''}`}
+                                >
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    {ev.filePath ? (
+                                      <div className="p-1 rounded bg-red-50 dark:bg-red-900/20">
+                                        <FileText className="h-4 w-4 text-red-500 shrink-0" />
+                                      </div>
+                                    ) : ev.link ? (
+                                      <div className="p-1 rounded bg-blue-50 dark:bg-blue-900/20">
+                                        <Link2 className="h-4 w-4 text-blue-500 shrink-0" />
+                                      </div>
+                                    ) : (
+                                      <div className="p-1 rounded bg-sky-50 dark:bg-sky-900/20">
+                                        <FileText className="h-4 w-4 text-sky-500 shrink-0" />
+                                      </div>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="truncate text-sky-800 dark:text-sky-200">{ev.name}</span>
+                                        <span className={`${statusBadgeClasses[ev.status] || statusBadgeClasses.draft} shrink-0`}>
+                                          {statusLabels[ev.status] || statusLabels.draft}
+                                        </span>
+                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${priorityColors[ev.priority] || priorityColors.medium}`}>
+                                          {priorityLabels[ev.priority] || priorityLabels.medium}
+                                        </span>
+                                        {ev.comments && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 shrink-0 cursor-help">
+                                                  <MessageSquare className="h-2.5 w-2.5" />
+                                                  <CommentCountBadge comments={ev.comments} />
+                                                </span>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="top" className="max-w-xs text-xs" dir="rtl">
+                                                {ev.comments}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
+                                      </div>
+                                      {ev.description && (
+                                        <p className="text-[11px] text-sky-500 dark:text-sky-400 mt-0.5 truncate">{ev.description}</p>
+                                      )}
+                                      <span className="text-[10px] text-sky-400">
+                                        {new Date(ev.createdAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {ev.link && (
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                                        <a href={ev.link} target="_blank" rel="noopener noreferrer">
+                                          <ExternalLink className="h-3.5 w-3.5" />
+                                        </a>
+                                      </Button>
+                                    )}
+                                    {ev.filePath && (
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setPdfViewerFile({ name: ev.fileName || ev.name, url: ev.filePath || '' }); setPdfViewerOpen(true); }}>
+                                        <Eye className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-sky-600 hover:text-sky-800"
+                                      onClick={() => openEditEvidence(ev)}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-red-500 hover:text-red-700"
+                                      onClick={() => setDeleteConfirm(ev.id)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
+        {filteredStandards.length === 0 && indicatorSearch && (
+          <div className="text-center py-12 text-sky-400 dark:text-sky-500">
+            <Filter className="h-12 w-12 mx-auto mb-3 opacity-40" />
+            <p>لا توجد مؤشرات مطابقة لـ &quot;{indicatorSearch}&quot;</p>
+          </div>
+        )}
+      </div>
+
+      {/* Evidence Dialog */}
+      <Dialog open={evidenceDialogOpen} onOpenChange={setEvidenceDialogOpen}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingEvidence ? 'تعديل الشاهد' : 'إضافة شاهد جديد'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingEvidence
+                ? 'قم بتعديل بيانات الشاهد'
+                : 'أدخل بيانات الشاهد الجديد'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="evidence-name">اسم الشاهد *</Label>
+              <Input
+                id="evidence-name"
+                value={evidenceName}
+                onChange={(e) => setEvidenceName(e.target.value)}
+                placeholder="أدخل اسم الشاهد"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="evidence-description">وصف / ملاحظات</Label>
+              <Textarea
+                id="evidence-description"
+                value={evidenceDescription}
+                onChange={(e) => setEvidenceDescription(e.target.value)}
+                placeholder="أضف وصفاً أو ملاحظات حول الشاهد..."
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="evidence-link">الرابط (اختياري)</Label>
+              <Input
+                id="evidence-link"
+                value={evidenceLink}
+                onChange={(e) => setEvidenceLink(e.target.value)}
+                placeholder="https://example.com"
+                dir="ltr"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="evidence-file">ملف PDF (اختياري)</Label>
+              <Input
+                id="evidence-file"
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png"
+                onChange={(e) => setEvidenceFile(e.target.files?.[0] || null)}
+              />
+              {evidenceFile && (
+                <p className="text-xs text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  {evidenceFile.name}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>حالة الشاهد</Label>
+                <Select value={evidenceStatus} onValueChange={setEvidenceStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">مسودة</SelectItem>
+                    <SelectItem value="submitted">مقدّم</SelectItem>
+                    <SelectItem value="approved">معتمد</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>الأهمية</Label>
+                <Select value={evidencePriority} onValueChange={setEvidencePriority}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">منخفض</SelectItem>
+                    <SelectItem value="medium">متوسط</SelectItem>
+                    <SelectItem value="high">مرتفع</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="evidence-comments">ملاحظات / تعليقات</Label>
+              <CommentsSection
+                comments={evidenceComments}
+                onCommentsChange={setEvidenceComments}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setEvidenceDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              onClick={handleSubmitEvidence}
+              disabled={!evidenceName.trim() || submitting}
+              className="gap-2"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              {editingEvidence ? 'تحديث' : 'إضافة'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف هذا الشاهد؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConfirm && handleDeleteEvidence(deleteConfirm)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* PDF Viewer Dialog */}
+      <Dialog open={pdfViewerOpen} onOpenChange={setPdfViewerOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh]" dir="rtl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-red-500" />
+                {pdfViewerFile?.name || 'عرض الملف'}
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                {pdfViewerFile?.url && (
+                  <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                    <a href={pdfViewerFile.url} target="_blank" rel="noopener noreferrer" download>
+                      <Download className="h-4 w-4" />
+                      تحميل
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="mt-2 border rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-900" style={{ height: '70vh' }}>
+            {pdfViewerFile?.url ? (
+              <iframe
+                src={pdfViewerFile.url}
+                className="w-full h-full border-0"
+                title={pdfViewerFile.name}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                <FileText className="h-16 w-16" />
+                <p>لا يمكن عرض الملف</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating Quick Add Evidence Button */}
+      <button
+        className="domain-quick-add"
+        onClick={() => {
+          const firstStandard = field.standards[0];
+          const firstIndicator = firstStandard?.indicators[0];
+          if (firstIndicator) openAddEvidence(firstIndicator.id);
+        }}
+        title="إضافة شاهد سريع"
+        aria-label="إضافة شاهد سريع"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
+      {/* Quick Stats Footer - Sticky Bottom Bar */}
+      {(() => {
+        const allDomainEvidence = field.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences));
+        const totalEv = allDomainEvidence.length;
+        const approvedEv = allDomainEvidence.filter((e) => e.status === 'approved').length;
+        const draftEv = allDomainEvidence.filter((e) => e.status === 'draft').length;
+        const completionPct = field.totalRequired > 0 ? Math.round((field.totalUploaded / field.totalRequired) * 100) : 0;
+        return (
+          <div className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-t border-sky-200/50 dark:border-slate-700/50 shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+              <div className="flex items-center justify-between gap-4 text-xs">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5 text-sky-700 dark:text-sky-300">
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    <span className="font-bold">{totalEv}</span>
+                    <span className="text-sky-500 dark:text-sky-400">شاهد</span>
+                  </div>
+                  <div className="h-4 w-px bg-sky-200 dark:bg-slate-700" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{approvedEv}</span>
+                    <span className="text-sky-500 dark:text-sky-400">معتمد</span>
+                  </div>
+                  <div className="h-4 w-px bg-sky-200 dark:bg-slate-700" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-500 dark:text-slate-400 font-bold">{draftEv}</span>
+                    <span className="text-sky-500 dark:text-sky-400">مسودة</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Progress value={completionPct} className="h-2 w-20" />
+                  <span className="font-bold text-sky-700 dark:text-sky-300">{completionPct}%</span>
+                  <span className="text-sky-500 dark:text-sky-400">إنجاز</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
