@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Home, BarChart3, CheckCircle2, Circle, AlertCircle,
   Search, Eye, Download, Loader2, Shield, X, Menu, ExternalLink,
   Moon, Sun, Printer, FileJson, Clock, Filter, Import, Bell, HelpCircle, Target, TrendingUp, Award, ClipboardList, ArrowUpRight, ArrowDownRight,
-  RefreshCw, Phone, Youtube, CheckCheck, Flag
+  RefreshCw, Phone, Youtube, CheckCheck, Flag, FileSpreadsheet
 } from 'lucide-react';
 import {
   BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip,
@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 
@@ -35,10 +36,12 @@ import { toast } from 'sonner';
 interface Evidence {
   id: string;
   name: string;
+  description: string | null;
   link: string | null;
   fileName: string | null;
   filePath: string | null;
   status: string;
+  priority: string;
   indicatorId: string;
   createdAt: string;
   updatedAt: string;
@@ -138,6 +141,33 @@ const statusColors: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
   submitted: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+};
+
+// Status badge class map (enhanced animated badges)
+const statusBadgeClasses: Record<string, string> = {
+  draft: 'status-badge status-badge-draft',
+  submitted: 'status-badge status-badge-submitted',
+  approved: 'status-badge status-badge-approved',
+};
+
+// Evidence priority class map based on status
+const evidencePriorityClasses: Record<string, string> = {
+  draft: 'evidence-priority-low',
+  submitted: 'evidence-priority-medium',
+  approved: 'evidence-priority-high',
+};
+
+// ============ Evidence Priority Helpers ============
+const priorityLabels: Record<string, string> = {
+  low: 'منخفض',
+  medium: 'متوسط',
+  high: 'مرتفع',
+};
+
+const priorityColors: Record<string, string> = {
+  low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+  medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 // ============ Google SVG Icon ============
@@ -707,17 +737,70 @@ export default function QurtubahApp() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="text-center mb-10 animate-fade-in">
               <div className="flex justify-center mb-4">
-                <div className="h-20 w-20 skeleton rounded-2xl" />
+                <div className="h-20 w-20 skeleton skeleton-circle" />
               </div>
-              <div className="h-8 w-64 mx-auto skeleton mb-3" />
-              <div className="h-5 w-48 mx-auto skeleton" />
+              <div className="h-8 w-64 mx-auto skeleton skeleton-heading mb-3" />
+              <div className="h-5 w-48 mx-auto skeleton skeleton-line" />
+              <div className="h-4 w-32 mx-auto skeleton skeleton-text mt-2" />
             </div>
             <div className="h-40 skeleton mb-8 rounded-xl" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="h-48 skeleton rounded-xl" />
-              <div className="h-48 skeleton rounded-xl" />
-              <div className="h-48 skeleton rounded-xl" />
-              <div className="h-48 skeleton rounded-xl" />
+              <div className="p-5 rounded-xl border border-sky-100/50 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 skeleton skeleton-circle" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 skeleton skeleton-line" />
+                    <div className="h-3 w-1/2 skeleton skeleton-text" />
+                  </div>
+                </div>
+                <div className="h-2 skeleton skeleton-line" />
+                <div className="flex gap-2">
+                  <div className="h-5 w-16 skeleton skeleton-badge" />
+                  <div className="h-5 w-16 skeleton skeleton-badge" />
+                </div>
+              </div>
+              <div className="p-5 rounded-xl border border-sky-100/50 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 skeleton skeleton-circle" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 skeleton skeleton-line" />
+                    <div className="h-3 w-1/2 skeleton skeleton-text" />
+                  </div>
+                </div>
+                <div className="h-2 skeleton skeleton-line" />
+                <div className="flex gap-2">
+                  <div className="h-5 w-16 skeleton skeleton-badge" />
+                  <div className="h-5 w-16 skeleton skeleton-badge" />
+                </div>
+              </div>
+              <div className="p-5 rounded-xl border border-sky-100/50 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 skeleton skeleton-circle" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 skeleton skeleton-line" />
+                    <div className="h-3 w-1/2 skeleton skeleton-text" />
+                  </div>
+                </div>
+                <div className="h-2 skeleton skeleton-line" />
+                <div className="flex gap-2">
+                  <div className="h-5 w-16 skeleton skeleton-badge" />
+                  <div className="h-5 w-16 skeleton skeleton-badge" />
+                </div>
+              </div>
+              <div className="p-5 rounded-xl border border-sky-100/50 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 skeleton skeleton-circle" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 skeleton skeleton-line" />
+                    <div className="h-3 w-1/2 skeleton skeleton-text" />
+                  </div>
+                </div>
+                <div className="h-2 skeleton skeleton-line" />
+                <div className="flex gap-2">
+                  <div className="h-5 w-16 skeleton skeleton-badge" />
+                  <div className="h-5 w-16 skeleton skeleton-badge" />
+                </div>
+              </div>
             </div>
           </div>
         ) : (
@@ -1520,13 +1603,40 @@ function DomainComparisonTable({ fields }: { fields: FieldWithDetails[] }) {
 }
 
 // ============ Overall Progress Card Component ============
-function OverallProgressCard({ overallProgress, onRefresh }: { overallProgress: ProgressData; onRefresh?: () => Promise<void> }) {
+function OverallProgressCard({ overallProgress, onRefresh, fields }: { overallProgress: ProgressData; onRefresh?: () => Promise<void>; fields?: FieldWithDetails[] }) {
   const animatedFields = useAnimatedCounter(overallProgress.totalFields);
   const animatedIndicators = useAnimatedCounter(overallProgress.totalIndicators);
   const animatedCompleted = useAnimatedCounter(overallProgress.completedIndicators);
   const animatedUploaded = useAnimatedCounter(overallProgress.totalUploaded);
   const animatedProgress = useAnimatedCounter(overallProgress.progress);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Calculate last updated from most recent evidence updatedAt
+  const lastUpdated = useMemo(() => {
+    if (!fields || fields.length === 0) return null;
+    const allEvidence = fields.flatMap((f) => f.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences)));
+    if (allEvidence.length === 0) return null;
+    const latest = allEvidence.reduce((latest, ev) => {
+      const d = new Date(ev.updatedAt || ev.createdAt);
+      return d > latest ? d : latest;
+    }, new Date(0));
+    return latest;
+  }, [fields]);
+
+  const formatRelativeTime = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSeconds < 60) return 'الآن';
+    if (diffMinutes < 60) return `منذ ${diffMinutes} دقيقة${diffMinutes > 1 ? '' : ''}`;
+    if (diffHours < 24) return `منذ ${diffHours} ساعة${diffHours > 1 ? '' : ''}`;
+    if (diffDays < 30) return `منذ ${diffDays} يوم`;
+    return date.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+  };
 
   const handleRefresh = async () => {
     if (!onRefresh || refreshing) return;
@@ -1559,7 +1669,15 @@ function OverallProgressCard({ overallProgress, onRefresh }: { overallProgress: 
       </div>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg text-sky-900 dark:text-sky-100">التقدم العام</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg text-sky-900 dark:text-sky-100">التقدم العام</CardTitle>
+            {lastUpdated && (
+              <span className="text-[11px] text-sky-400 dark:text-sky-500 flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                آخر تحديث: {formatRelativeTime(lastUpdated)}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             {onRefresh && (
               <Button variant="ghost" size="icon" className="h-8 w-8 btn-press" onClick={handleRefresh} title="تحديث البيانات">
@@ -1672,7 +1790,7 @@ function HomePage({
 
       {/* Overall Progress Card */}
       {overallProgress && (
-        <OverallProgressCard overallProgress={overallProgress} onRefresh={onRefresh} />
+        <OverallProgressCard overallProgress={overallProgress} onRefresh={onRefresh} fields={fields} />
       )}
 
       {/* Progress Milestones */}
@@ -1688,7 +1806,7 @@ function HomePage({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="ابحث في المجالات..."
-            className="pr-9 text-center dark:bg-slate-800 dark:border-slate-700"
+            className="pr-9 text-center dark:bg-slate-800 dark:border-slate-700 search-glow"
           />
           {searchTerm && (
             <Button
@@ -1713,7 +1831,7 @@ function HomePage({
           return (
             <Card
               key={field.id}
-              className={`cursor-pointer domain-card-hover transition-all duration-300 border-sky-200 dark:border-slate-700 hover:border-sky-400 group overflow-hidden animate-fade-in stagger-${index + 1} relative`}
+              className={`cursor-pointer domain-card-hover card-hover-shimmer transition-all duration-300 border-sky-200 dark:border-slate-700 hover:border-sky-400 group overflow-hidden animate-fade-in stagger-${index + 1} relative`}
               onClick={() => onFieldClick(field.id)}
               style={{ ['--domain-color' as string]: domainBarColors[originalIndex % 4] }}
             >
@@ -1747,13 +1865,13 @@ function HomePage({
                 </div>
               </CardHeader>
               <CardContent className="pt-0 relative">
-                <Progress value={field.progress} className="h-2.5 mb-3" />
+                <Progress value={field.progress} className="h-2.5 mb-3 domain-card-progress" />
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-4">
-                    <span className={colors.text}>
+                    <span className={`domain-card-stats ${colors.iconBg} ${colors.text}`}>
                       {field.standardsCount} معايير
                     </span>
-                    <span className={colors.text}>
+                    <span className={`domain-card-stats ${colors.iconBg} ${colors.text}`}>
                       {field.indicatorsCount} مؤشرات
                     </span>
                   </div>
@@ -1778,7 +1896,7 @@ function HomePage({
                   <Button
                     variant="outline"
                     size="sm"
-                    className={`w-full gap-2 ${colors.text} border-current/30 hover:bg-sky-50 dark:hover:bg-slate-800`}
+                    className={`w-full gap-2 ${colors.text} border-current/30 hover:bg-sky-50 dark:hover:bg-slate-800 btn-detail-pulse touch-target`}
                     onClick={(e) => { e.stopPropagation(); onFieldClick(field.id); }}
                   >
                     <Eye className="h-3.5 w-3.5" />
@@ -1891,9 +2009,11 @@ function FieldDetailView({
 
   // Form state
   const [evidenceName, setEvidenceName] = useState('');
+  const [evidenceDescription, setEvidenceDescription] = useState('');
   const [evidenceLink, setEvidenceLink] = useState('');
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [evidenceStatus, setEvidenceStatus] = useState('draft');
+  const [evidencePriority, setEvidencePriority] = useState('medium');
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [pdfViewerFile, setPdfViewerFile] = useState<{ name: string; url: string } | null>(null);
 
@@ -1901,9 +2021,11 @@ function FieldDetailView({
     setSelectedIndicatorId(indicatorId);
     setEditingEvidence(null);
     setEvidenceName('');
+    setEvidenceDescription('');
     setEvidenceLink('');
     setEvidenceFile(null);
     setEvidenceStatus('draft');
+    setEvidencePriority('medium');
     setEvidenceDialogOpen(true);
   };
 
@@ -1911,9 +2033,11 @@ function FieldDetailView({
     setSelectedIndicatorId(evidence.indicatorId);
     setEditingEvidence(evidence);
     setEvidenceName(evidence.name);
+    setEvidenceDescription(evidence.description || '');
     setEvidenceLink(evidence.link || '');
     setEvidenceFile(null);
     setEvidenceStatus(evidence.status || 'draft');
+    setEvidencePriority(evidence.priority || 'medium');
     setEvidenceDialogOpen(true);
   };
 
@@ -1949,8 +2073,10 @@ function FieldDetailView({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: evidenceName,
+            description: evidenceDescription || null,
             link: evidenceLink || null,
             status: evidenceStatus,
+            priority: evidencePriority,
             ...(filePath && { filePath, fileName }),
           }),
         });
@@ -1965,10 +2091,12 @@ function FieldDetailView({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: evidenceName,
+            description: evidenceDescription || null,
             link: evidenceLink || null,
             fileName,
             filePath,
             status: evidenceStatus,
+            priority: evidencePriority,
             indicatorId: selectedIndicatorId,
           }),
         });
@@ -2080,7 +2208,7 @@ function FieldDetailView({
           </div>
         </CardHeader>
         <CardContent className={`pt-0 bg-gradient-to-l ${domainColors.bg}/30 to-white dark:to-slate-900 relative`}>
-          <Progress value={field.progress} className="h-3 mb-3" />
+          <Progress value={field.progress} className="h-3 mb-3 domain-card-progress" />
           <div className={`flex flex-wrap items-center gap-4 text-sm ${domainColors.text}`}>
             <div className="flex items-center gap-1.5 bg-white/70 dark:bg-slate-800/70 px-3 py-1 rounded-lg">
               <BarChart3 className={`h-4 w-4 ${domainColors.iconText}`} />
@@ -2109,7 +2237,7 @@ function FieldDetailView({
         </CardContent>
       </Card>
 
-      {/* Evidence Statistics Panel */}
+      {/* Evidence Statistics Panel - Enhanced */}
       {(() => {
         const allEvidence = field.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences));
         const totalEv = allEvidence.length;
@@ -2125,17 +2253,95 @@ function FieldDetailView({
           { icon: <TrendingUp className="h-4 w-4" />, value: completionPct, label: 'نسبة الإنجاز', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-900/20', border: 'border-sky-200 dark:border-sky-800', suffix: '%' },
         ];
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6 animate-slide-up">
-            {statCards.map((card, i) => (
-              <Card key={i} className={`border ${card.border} p-3 text-center card-lift`}>
-                <div className={`p-1.5 rounded-lg ${card.bg} w-fit mx-auto mb-2`}>
-                  <span className={card.color}>{card.icon}</span>
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6 animate-slide-up">
+              {statCards.map((card, i) => (
+                <Card key={i} className={`border ${card.border} p-3 text-center card-lift`}>
+                  <div className={`p-1.5 rounded-lg ${card.bg} w-fit mx-auto mb-2`}>
+                    <span className={card.color}>{card.icon}</span>
+                  </div>
+                  <p className={`text-xl font-bold ${card.color}`}>{card.value}{card.suffix || ''}</p>
+                  <p className="text-[10px] text-sky-500 dark:text-sky-400">{card.label}</p>
+                </Card>
+              ))}
+            </div>
+
+            {/* Enhanced Stats: Status Distribution + Standard Completion + Quick Add */}
+            <Card className="mb-6 border-sky-200 dark:border-slate-700 overflow-hidden animate-fade-in">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base text-sky-900 dark:text-sky-100">إحصائيات تفصيلية</CardTitle>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => {
+                      const firstIndicator = field.standards[0]?.indicators[0];
+                      if (firstIndicator) openAddEvidence(firstIndicator.id);
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    إضافة شاهد سريع
+                  </Button>
                 </div>
-                <p className={`text-xl font-bold ${card.color}`}>{card.value}{card.suffix || ''}</p>
-                <p className="text-[10px] text-sky-500 dark:text-sky-400">{card.label}</p>
-              </Card>
-            ))}
-          </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Status Distribution */}
+                  <div>
+                    <p className="text-sm font-medium text-sky-800 dark:text-sky-200 mb-3">توزيع حالات الشواهد</p>
+                    <div className="space-y-3">
+                      {[
+                        { key: 'draft', label: 'مسودة', count: draftCount, color: 'bg-slate-400', bgLight: 'bg-slate-100 dark:bg-slate-800' },
+                        { key: 'submitted', label: 'مقدّم', count: submittedCount, color: 'bg-amber-400', bgLight: 'bg-amber-100 dark:bg-amber-900/30' },
+                        { key: 'approved', label: 'معتمد', count: approvedCount, color: 'bg-emerald-400', bgLight: 'bg-emerald-100 dark:bg-emerald-900/30' },
+                      ].map((s) => (
+                        <div key={s.key} className="flex items-center gap-3">
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${statusBadgeClasses[s.key] || ''} ${s.bgLight}`}>
+                            {s.label}
+                          </span>
+                          <div className="flex-1 h-2.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${s.color} transition-all duration-500`}
+                              style={{ width: totalEv > 0 ? `${(s.count / totalEv) * 100}%` : '0%' }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-sky-700 dark:text-sky-300 min-w-[28px] text-left">{s.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Standard Completion Mini Progress */}
+                  <div>
+                    <p className="text-sm font-medium text-sky-800 dark:text-sky-200 mb-3">تقدم المعايير</p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                      {field.standards.map((s) => {
+                        const sReq = s.indicators.reduce((sum, ind) => sum + ind.requiredEvidence, 0);
+                        const sUp = s.indicators.reduce((sum, ind) => sum + ind.evidences.length, 0);
+                        const sProg = sReq > 0 ? Math.round((sUp / sReq) * 100) : 0;
+                        return (
+                          <div key={s.id} className="flex items-center gap-2">
+                            <span className="text-[11px] text-sky-700 dark:text-sky-300 truncate min-w-0 flex-1" title={s.name}>
+                              {s.name}
+                            </span>
+                            <div className="w-20 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${sProg === 100 ? 'bg-emerald-400' : sProg >= 50 ? 'bg-amber-400' : 'bg-sky-400'}`}
+                                style={{ width: `${sProg}%` }}
+                              />
+                            </div>
+                            <span className={`text-[11px] font-medium min-w-[32px] text-left ${sProg === 100 ? 'text-emerald-600 dark:text-emerald-400' : sProg >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-sky-600 dark:text-sky-400'}`}>
+                              {sProg}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
         );
       })()}
 
@@ -2147,7 +2353,7 @@ function FieldDetailView({
             value={indicatorSearch}
             onChange={(e) => setIndicatorSearch(e.target.value)}
             placeholder="ابحث في المؤشرات..."
-            className="pr-9 dark:bg-slate-800 dark:border-slate-700"
+            className="pr-9 dark:bg-slate-800 dark:border-slate-700 search-glow"
           />
           {indicatorSearch && (
             <Button
@@ -2271,7 +2477,7 @@ function FieldDetailView({
                               {indicator.evidences.map((ev) => (
                                 <div
                                   key={ev.id}
-                                  className="evidence-card flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-sm"
+                                  className={`evidence-card flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-sm ${evidencePriorityClasses[ev.status] || ''}`}
                                 >
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
                                     {ev.filePath ? (
@@ -2288,12 +2494,18 @@ function FieldDetailView({
                                       </div>
                                     )}
                                     <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-1.5">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="truncate text-sky-800 dark:text-sky-200">{ev.name}</span>
-                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${statusColors[ev.status] || statusColors.draft}`}>
+                                        <span className={`${statusBadgeClasses[ev.status] || statusBadgeClasses.draft} shrink-0`}>
                                           {statusLabels[ev.status] || statusLabels.draft}
                                         </span>
+                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${priorityColors[ev.priority] || priorityColors.medium}`}>
+                                          {priorityLabels[ev.priority] || priorityLabels.medium}
+                                        </span>
                                       </div>
+                                      {ev.description && (
+                                        <p className="text-[11px] text-sky-500 dark:text-sky-400 mt-0.5 truncate">{ev.description}</p>
+                                      )}
                                       <span className="text-[10px] text-sky-400">
                                         {new Date(ev.createdAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' })}
                                       </span>
@@ -2374,6 +2586,17 @@ function FieldDetailView({
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="evidence-description">وصف / ملاحظات</Label>
+              <Textarea
+                id="evidence-description"
+                value={evidenceDescription}
+                onChange={(e) => setEvidenceDescription(e.target.value)}
+                placeholder="أضف وصفاً أو ملاحظات حول الشاهد..."
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="evidence-link">الرابط (اختياري)</Label>
               <Input
                 id="evidence-link"
@@ -2398,18 +2621,33 @@ function FieldDetailView({
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label>حالة الشاهد</Label>
-              <Select value={evidenceStatus} onValueChange={setEvidenceStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">مسودة</SelectItem>
-                  <SelectItem value="submitted">مقدّم</SelectItem>
-                  <SelectItem value="approved">معتمد</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>حالة الشاهد</Label>
+                <Select value={evidenceStatus} onValueChange={setEvidenceStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">مسودة</SelectItem>
+                    <SelectItem value="submitted">مقدّم</SelectItem>
+                    <SelectItem value="approved">معتمد</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>الأهمية</Label>
+                <Select value={evidencePriority} onValueChange={setEvidencePriority}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">منخفض</SelectItem>
+                    <SelectItem value="medium">متوسط</SelectItem>
+                    <SelectItem value="high">مرتفع</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -2490,6 +2728,20 @@ function FieldDetailView({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Quick Add Evidence Button */}
+      <button
+        className="domain-quick-add"
+        onClick={() => {
+          const firstStandard = field.standards[0];
+          const firstIndicator = firstStandard?.indicators[0];
+          if (firstIndicator) openAddEvidence(firstIndicator.id);
+        }}
+        title="إضافة شاهد سريع"
+        aria-label="إضافة شاهد سريع"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
     </div>
   );
 }
@@ -2896,6 +3148,50 @@ function DashboardView({
     input.click();
   };
 
+  // Export CSV
+  const handleExportCSV = async () => {
+    try {
+      const evidenceRes = await fetch('/api/evidence');
+      if (!evidenceRes.ok) {
+        toast.error('فشل جلب بيانات الشواهد');
+        return;
+      }
+      const evidenceList: any[] = await evidenceRes.json();
+
+      const BOM = '\uFEFF';
+      const headers = ['اسم الشاهد', 'الوصف', 'الحالة', 'الأهمية', 'الرابط', 'الملف', 'المؤشر', 'المعيار', 'المجال', 'تاريخ الإنشاء'];
+      const rows = evidenceList.map((ev) => [
+        ev.name || '',
+        ev.description || '',
+        statusLabels[ev.status] || 'مسودة',
+        priorityLabels[ev.priority] || 'متوسط',
+        ev.link || '',
+        ev.fileName || '',
+        ev.indicator?.name || '',
+        ev.indicator?.standard?.name || '',
+        ev.indicator?.standard?.field?.name || '',
+        new Date(ev.createdAt).toLocaleDateString('ar-SA'),
+      ]);
+
+      const csvContent = BOM + [headers, ...rows].map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      ).join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `qurtubah-evidence-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('تم تصدير CSV بنجاح');
+    } catch {
+      toast.error('فشل تصدير CSV');
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Dashboard Header */}
@@ -2910,6 +3206,10 @@ function DashboardView({
           </div>
         </div>
         <div className="flex items-center gap-2 no-print flex-wrap">
+          <Button variant="outline" size="sm" className="gap-2 btn-press" onClick={handleExportCSV}>
+            <FileSpreadsheet className="h-4 w-4" />
+            تصدير CSV
+          </Button>
           <Button variant="outline" size="sm" className="gap-2 btn-press" onClick={handleImportJSON}>
             <Upload className="h-4 w-4" />
             استيراد بيانات
@@ -3017,19 +3317,19 @@ function DashboardView({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="fields">
+        <TabsContent value="fields" className="tab-content-animate">
           <FieldsManager fields={fields} onRefresh={onRefresh} />
         </TabsContent>
-        <TabsContent value="standards">
+        <TabsContent value="standards" className="tab-content-animate">
           <StandardsManager fields={fields} onRefresh={onRefresh} />
         </TabsContent>
-        <TabsContent value="indicators">
+        <TabsContent value="indicators" className="tab-content-animate">
           <IndicatorsManager fields={fields} onRefresh={onRefresh} />
         </TabsContent>
-        <TabsContent value="evidence">
+        <TabsContent value="evidence" className="tab-content-animate">
           <EvidenceManager fields={fields} onRefresh={onRefresh} />
         </TabsContent>
-        <TabsContent value="statistics">
+        <TabsContent value="statistics" className="tab-content-animate">
           <StatisticsPanel fields={fields} />
         </TabsContent>
       </Tabs>
@@ -3934,6 +4234,9 @@ function EvidenceManager({ fields, onRefresh }: { fields: FieldWithDetails[]; on
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<string>('submitted');
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -3968,6 +4271,53 @@ function EvidenceManager({ fields, onRefresh }: { fields: FieldWithDetails[]; on
     return matchesSearch && matchesStatus;
   });
 
+  const allFilteredSelected = filteredEvidence.length > 0 && filteredEvidence.every((ev) => selectedIds.has(ev.id));
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredEvidence.map((ev) => ev.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkStatusChange = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkProcessing(true);
+    try {
+      const results = await Promise.allSettled(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/evidence/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: bulkStatus }),
+          })
+        )
+      );
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+      toast.success(`تم تحديث حالة ${succeeded} شاهد إلى "${statusLabels[bulkStatus]}"`);
+      setSelectedIds(new Set());
+      setRefreshKey(k => k + 1);
+      await onRefresh();
+    } catch {
+      toast.error('حدث خطأ أثناء التحديث');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/evidence/${id}`, { method: 'DELETE' });
@@ -3993,7 +4343,7 @@ function EvidenceManager({ fields, onRefresh }: { fields: FieldWithDetails[]; on
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="بحث في الشواهد..."
-              className="pr-9 dark:bg-slate-800 dark:border-slate-700"
+              className="pr-9 dark:bg-slate-800 dark:border-slate-700 search-glow"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -4010,13 +4360,59 @@ function EvidenceManager({ fields, onRefresh }: { fields: FieldWithDetails[]; on
         </div>
       </div>
 
+      {/* Bulk Actions Toolbar - floating bottom */}
+      {selectedIds.size > 0 && (
+        <div className="action-toolbar mt-4">
+          <span className="text-sm font-medium text-sky-800 dark:text-sky-200">
+            تم تحديد {selectedIds.size} شاهد
+          </span>
+          <Select value={bulkStatus} onValueChange={setBulkStatus}>
+            <SelectTrigger className="w-[120px] h-8 text-xs dark:bg-slate-700 dark:border-slate-600">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">مسودة</SelectItem>
+              <SelectItem value="submitted">مقدّم</SelectItem>
+              <SelectItem value="approved">معتمد</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={handleBulkStatusChange}
+            disabled={bulkProcessing}
+          >
+            {bulkProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />}
+            تطبيق
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-sky-600"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            إلغاء التحديد
+          </Button>
+        </div>
+      )}
+
       <div className="rounded-xl border border-sky-200 dark:border-slate-700 overflow-hidden shadow-sm max-h-[600px] overflow-y-auto">
         <Table className="table-zebra">
           <TableHeader>
             <TableRow className="bg-gradient-to-l from-sky-50 to-sky-100/80 dark:from-slate-800 dark:to-slate-900 sticky top-0">
+              <TableHead className="text-right w-10">
+                <div className={`checkbox-anim ${allFilteredSelected ? 'checked' : ''}`}>
+                  <Checkbox
+                    checked={allFilteredSelected}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="تحديد الكل"
+                  />
+                </div>
+              </TableHead>
               <TableHead className="text-right">#</TableHead>
               <TableHead className="text-right">الشاهد</TableHead>
               <TableHead className="text-right">الحالة</TableHead>
+              <TableHead className="text-right">الأهمية</TableHead>
               <TableHead className="text-right">المؤشر</TableHead>
               <TableHead className="text-right">المعيار</TableHead>
               <TableHead className="text-right">المجال</TableHead>
@@ -4027,18 +4423,39 @@ function EvidenceManager({ fields, onRefresh }: { fields: FieldWithDetails[]; on
           <TableBody>
             {loadingEvidence ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={10} className="text-center py-8">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto text-sky-600" />
                 </TableCell>
               </TableRow>
             ) : (
               filteredEvidence.map((ev, i) => (
-                <TableRow key={ev.id} className="enhanced-table-row table-row-accent">
-                  <TableCell>{i + 1}</TableCell>
-                  <TableCell className="font-medium dark:text-sky-100">{ev.name}</TableCell>
+                <TableRow key={ev.id} className={`enhanced-table-row table-row-accent ${selectedIds.has(ev.id) ? 'bulk-select-row' : ''}`}>
                   <TableCell>
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColors[ev.status] || statusColors.draft}`}>
+                    <div className={`checkbox-anim ${selectedIds.has(ev.id) ? 'checked' : ''}`}>
+                      <Checkbox
+                        checked={selectedIds.has(ev.id)}
+                        onCheckedChange={() => toggleSelect(ev.id)}
+                        aria-label={`تحديد ${ev.name}`}
+                      />
+                    </div>
+                  </TableCell>
+                  <TableCell>{i + 1}</TableCell>
+                  <TableCell className="font-medium dark:text-sky-100">
+                    <div>
+                      <span>{ev.name}</span>
+                      {ev.description && (
+                        <p className="text-[11px] text-sky-500 dark:text-sky-400 truncate max-w-[180px]">{ev.description}</p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`${statusBadgeClasses[ev.status] || statusBadgeClasses.draft}`}>
                       {statusLabels[ev.status] || statusLabels.draft}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${priorityColors[ev.priority] || priorityColors.medium}`}>
+                      {priorityLabels[ev.priority] || priorityLabels.medium}
                     </span>
                   </TableCell>
                   <TableCell className="text-sm text-sky-600 dark:text-sky-400 max-w-[200px] truncate">
@@ -4095,7 +4512,7 @@ function EvidenceManager({ fields, onRefresh }: { fields: FieldWithDetails[]; on
             )}
             {!loadingEvidence && filteredEvidence.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-sky-400 py-8">
+                <TableCell colSpan={10} className="text-center text-sky-400 py-8">
                   {searchTerm ? 'لا توجد نتائج للبحث' : 'لا توجد شواهد بعد'}
                 </TableCell>
               </TableRow>

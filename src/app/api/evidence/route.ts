@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, link, fileName, filePath, indicatorId, status } = body;
+    const { name, description, link, fileName, filePath, indicatorId, status, priority } = body;
 
     if (!name || !indicatorId) {
       return NextResponse.json({ error: 'Name and indicatorId are required' }, { status: 400 });
@@ -44,10 +44,12 @@ export async function POST(request: NextRequest) {
     const evidence = await db.evidence.create({
       data: {
         name,
+        description: description || null,
         link: link || null,
         fileName: fileName || null,
         filePath: filePath || null,
         status: status || 'draft',
+        priority: priority || 'medium',
         indicatorId,
       },
     });

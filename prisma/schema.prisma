@@ -57,10 +57,12 @@ model Indicator {
 model Evidence {
   id          String    @id @default(cuid())
   name        String
+  description String?
   link        String?
   fileName    String?
   filePath    String?
   status      String    @default("draft") // "draft", "submitted", "approved"
+  priority    String    @default("medium") // "low", "medium", "high"
   indicatorId String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

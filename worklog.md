@@ -668,3 +668,76 @@ The Qurtubah Schools Evaluation Website is a mature, feature-rich, and productio
 5. **Bulk Evidence Upload** - Could support uploading multiple evidence files at once
 6. **Advanced PDF Reporting** - Could generate PDF reports per domain/standard using ReportLab
 7. **Real-time Collaboration** - Could add WebSocket for multi-user editing
+
+---
+Task ID: 9-b
+Agent: Frontend Styling Expert
+Task: Enhance CSS and styling with new utilities, animations, and visual polish
+
+Work Log:
+- Added Evidence Priority Card Styles to globals.css:
+  - `.evidence-priority-high` - Red right border (3px solid #ef4444) with subtle red background + dark mode
+  - `.evidence-priority-medium` - Amber right border (3px solid #f59e0b) with subtle amber background + dark mode
+  - `.evidence-priority-low` - Slate right border (3px solid #94a3b8) with subtle slate background + dark mode
+  - All with hover states and smooth transitions
+- Added Improved Badge Styles to globals.css:
+  - `.status-badge` - Base class with subtle pulse animation and better spacing
+  - `.status-badge-draft` - Gray pulsing dot animation via `badge-dot-pulse` keyframe
+  - `.status-badge-submitted` - Amber spinning ring animation via `badge-ring-spin` keyframe
+  - `.status-badge-approved` - Green checkmark animation via `check-bounce` keyframe
+- Added Enhanced Table Styles to globals.css:
+  - `.bulk-select-row` - Highlighted row style with teal background (light/dark modes)
+  - `.action-toolbar` - Floating toolbar with backdrop blur, shadow, and slide-down animation
+  - Mobile: action-toolbar fixed at bottom on small screens (max-width: 640px)
+  - `.checkbox-anim` - Custom checkbox with scale bounce on check (44px min touch target)
+- Added Domain Card Styles to globals.css:
+  - `.domain-card-progress` - Animated gradient shimmer on progress bar
+  - `.domain-card-stats` - Better stat display with icon alignment and hover scale
+  - `.domain-quick-add` - Floating action button style (56px circle, gradient, hover rotation)
+- Added New Keyframe Animations to globals.css:
+  - `@keyframes slide-in-right` - Slide in from right with opacity
+  - `@keyframes fade-scale` - Fade in with scale from 0.95 to 1
+  - `@keyframes check-bounce` - Bouncy checkmark animation (5-step scale)
+  - `@keyframes badge-pulse-subtle` - Very subtle badge opacity pulse
+  - `@keyframes toolbar-slide-down` - Toolbar slides down from top
+  - `@keyframes badge-dot-pulse` - Pulsing dot for draft badges
+  - `@keyframes badge-ring-spin` - Spinning ring for submitted badges
+  - `@keyframes slide-in-right-rtl` - RTL-aware slide animation
+- Added Additional Utility Classes to globals.css:
+  - `.search-glow` - Subtle glow on focus for search inputs
+  - `.btn-detail-pulse` - Bounce animation on click for detail buttons
+  - `.card-hover-shimmer` - Border shimmer on hover for cards
+  - `.tab-content-animate` - Fade-scale animation for tab content
+  - `.touch-target` - 44px minimum touch target size
+  - `.skeleton-circle`, `.skeleton-line`, `.skeleton-heading`, `.skeleton-text`, `.skeleton-badge` - Enhanced skeleton shapes
+- Applied New Classes to page.tsx:
+  - Applied `evidencePriorityClasses` to evidence cards in FieldDetailView based on status (draft=low, submitted=medium, approved=high)
+  - Replaced `statusColors` badges with `statusBadgeClasses` (animated status badges) in both FieldDetailView and EvidenceManager
+  - Applied `domain-card-progress` class to progress bars in domain cards and field detail hero
+  - Applied `domain-card-stats` class to stat displays in domain cards
+  - Applied `card-hover-shimmer` to domain Card components
+  - Applied `btn-detail-pulse` and `touch-target` to "عرض التفاصيل" button
+  - Applied `search-glow` to all search inputs (home, field detail, evidence manager)
+  - Applied `tab-content-animate` to all dashboard TabsContent components
+- Enhanced Loading Skeleton:
+  - Replaced simple skeleton rectangles with detailed shapes matching actual content layout
+  - Added skeleton-circle for avatars, skeleton-line for text, skeleton-heading for titles
+  - Added skeleton-badge for badge elements, skeleton-text for small text
+- Added Floating Quick Add Button:
+  - Added `domain-quick-add` button in FieldDetailView
+  - Positioned fixed at bottom-left with gradient background
+  - Rotates 90° on hover, scales on active
+  - Opens evidence dialog for first indicator when clicked
+- ESLint: 0 errors, 0 warnings
+
+Stage Summary:
+- 20+ new CSS utility classes and 7+ keyframe animations added
+- All new styles support dark mode with proper variants
+- Evidence cards now have visual priority indicators based on status
+- Status badges now have animated indicators (pulsing dot, spinning ring, bouncing checkmark)
+- Domain cards have enhanced progress bars and stat displays
+- Search inputs have subtle glow on focus
+- Tab switching in dashboard has smooth fade-scale animation
+- Loading skeleton improved with detailed shapes matching actual content
+- Floating quick-add button for evidence in field detail view
+- All new features are touch-friendly (44px minimum targets)
