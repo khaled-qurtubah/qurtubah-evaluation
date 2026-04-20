@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, link, fileName, filePath, indicatorId, status, priority, comments } = body;
+    const { name, description, link, fileName, filePath, indicatorId, status, priority, comments, dueDate } = body;
 
     if (!name || !indicatorId) {
       return NextResponse.json({ error: 'Name and indicatorId are required' }, { status: 400 });
@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
         status: status || 'draft',
         priority: priority || 'medium',
         comments: comments || null,
+        dueDate: dueDate ? new Date(dueDate) : null,
         indicatorId,
       },
     });

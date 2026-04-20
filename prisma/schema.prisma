@@ -64,6 +64,7 @@ model Evidence {
   filePath    String?
   status      String    @default("draft") // "draft", "submitted", "approved"
   priority    String    @default("medium") // "low", "medium", "high"
+  dueDate     DateTime?
   comments    String?
   indicatorId String
   createdAt   DateTime  @default(now())

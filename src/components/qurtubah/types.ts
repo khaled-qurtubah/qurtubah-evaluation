@@ -7,6 +7,7 @@ export interface Evidence {
   filePath: string | null;
   status: string;
   priority: string;
+  dueDate: string | null;
   comments: string | null;
   indicatorId: string;
   createdAt: string;

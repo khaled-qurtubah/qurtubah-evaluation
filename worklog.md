@@ -808,3 +808,66 @@ Stage Summary:
 - Mobile navigation completely redesigned with slide-in panel
 - Login page has shield watermark, gradient line, shake animation, enhanced focus
 - Standard accordion has colored accents, completion badges, staggered indicators
+
+---
+Task ID: 10
+Agent: Cron Review Agent (Round 6)
+Task: QA testing, bug fixes, styling improvements, and new features
+
+Work Log:
+- Read worklog.md and assessed current project status (5 rounds of prior work)
+- Found dev server was not running - restarted it
+- Discovered critical bug: Prisma query logging (`log: ['query']`) was causing the dev server to crash after a few API requests due to excessive output/memory
+- Fixed Prisma query logging: Changed from `log: ['query']` to `log: ['warn', 'error']` in `/home/z/my-project/src/lib/db.ts`
+- Ran `db:push` to sync the `dueDate` column that was in the Prisma schema but missing from the actual SQLite database
+- Verified dueDate field is now returned in the API response
+- Added 200+ lines of new CSS utility classes and animations to globals.css:
+  - Progress bar gradient fills based on completion percentage (low/mid/high/complete)
+  - Scroll reveal animations (scroll-reveal, scroll-reveal-up, scroll-reveal-scale)
+  - Evidence status gradient card styles (draft/submitted/approved with color-coded borders)
+  - Enhanced evidence card hover with shadow lift effect
+  - Footer quick stats row with stat dots
+  - Footer column separator with gradient line
+  - Mobile menu slide-in animation (RTL-aware)
+  - Page loading spinner animation
+  - Card inner glow on hover
+  - Dashboard visual summary decorative pattern
+  - Stat value pop animation
+  - Heading decorated underline accent
+  - Completion badge styles (gold/silver/bronze)
+  - Standard accordion accent borders
+  - Progress color utility classes per domain
+  - Progress animated and complete shine effects
+  - Footer wave enhanced with dark mode
+  - Stats card enhanced hover
+  - Smooth dark mode card transitions
+- Applied evidence card enhancements to FieldDetailView:
+  - Added `evidence-card-enhanced` class for shadow lift hover
+  - Added `evidence-status-${status}` class for status-based gradient backgrounds and borders
+  - Added `border border-sky-100 dark:border-slate-700` for consistent card borders
+- Updated footer in page.tsx:
+  - Added quick stats row showing "4 مجالات • 11 معيار • 52 مؤشر • XX% إنجاز"
+  - Added footer-column-separator to school info and quick links columns
+- Created DueDateTracker component (`/home/z/my-project/src/components/qurtubah/DueDateTracker.tsx`):
+  - Shows evidence items with upcoming and overdue due dates
+  - Sorted by urgency (overdue first, then by due date)
+  - Color-coded cards (red for overdue, amber for due soon)
+  - Domain color indicator per item
+  - Shows relative time badges (متأخر X يوم, باقي X يوم, اليوم)
+  - Shows formatted due date with calendar icon
+  - Navigation button to view the related domain
+  - Only displays when there are items with due dates
+- Integrated DueDateTracker into HomePage (between AttentionWidget and ProgressMilestones)
+- Added sample due dates to 5 evidence items via direct Prisma update (3 overdue, 2 upcoming)
+- ESLint: 0 errors, 0 warnings
+- Dev server running on port 3000
+
+Stage Summary:
+- Critical bug fixed: Prisma query logging was crashing the dev server
+- Database schema synced: dueDate column now exists and is returned in API
+- 20+ new CSS utility classes and animations added
+- Evidence cards now have status-based gradient backgrounds and hover effects
+- Footer enhanced with quick stats and column separators
+- DueDateTracker widget created and integrated into HomePage
+- 5 evidence items now have sample due dates for testing
+- All features verified working: lint passes, API returns 200

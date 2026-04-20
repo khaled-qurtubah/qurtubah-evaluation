@@ -7,6 +7,7 @@ import {
   Home, LogIn, LogOut,
   LayoutDashboard, Shield, X, Menu,
   Moon, Sun, Bell, HelpCircle, Youtube, Phone, CheckCheck,
+  ArrowUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -25,6 +26,7 @@ const DashboardView = dynamic(() => import('@/components/qurtubah/DashboardView'
 export default function QurtubahApp() {
   const [currentView, setCurrentView] = useState<View>('home');
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [quickAddIndicatorId, setQuickAddIndicatorId] = useState<string | null>(null);
   const [fields, setFields] = useState<FieldWithDetails[]>([]);
   const [overallProgress, setOverallProgress] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,7 @@ export default function QurtubahApp() {
   });
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   // Dark mode state with lazy initializer
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -103,6 +106,19 @@ export default function QurtubahApp() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView]);
+
+  // Back-to-top visibility listener
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Fetch data
   const fetchFields = useCallback(async () => {
@@ -270,6 +286,18 @@ export default function QurtubahApp() {
   const navigateToField = (fieldId: string) => {
     setSelectedFieldId(fieldId);
     setCurrentView('field');
+  };
+
+  const handleQuickAddEvidence = (indicatorId: string) => {
+    // Find which field contains this indicator
+    const field = fields.find((f) =>
+      f.standards.some((s) => s.indicators.some((ind) => ind.id === indicatorId))
+    );
+    if (field) {
+      setQuickAddIndicatorId(indicatorId);
+      setSelectedFieldId(field.id);
+      setCurrentView('field');
+    }
   };
 
   const navigateHome = () => {
@@ -617,6 +645,7 @@ export default function QurtubahApp() {
                   overallProgress={overallProgress}
                   onFieldClick={navigateToField}
                   onRefresh={refreshData}
+                  onQuickAddEvidence={handleQuickAddEvidence}
                 />
               </motion.div>
             )}
@@ -634,6 +663,8 @@ export default function QurtubahApp() {
                   onBack={navigateHome}
                   onRefresh={refreshData}
                   onNavigateToField={navigateToField}
+                  quickAddIndicatorId={quickAddIndicatorId}
+                  onQuickAddConsumed={() => setQuickAddIndicatorId(null)}
                 />
               </motion.div>
             )}
@@ -682,9 +713,16 @@ export default function QurtubahApp() {
         <div className="footer-wave-enhanced" />
         <div className="bg-gradient-to-b from-sky-900 to-sky-950 dark:from-slate-800 dark:to-slate-900 text-white footer-shimmer-border footer-pattern relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+            {/* Quick Stats Row */}
+            <div className="footer-quick-stats mb-4 pb-3 border-b border-sky-700/30">
+              <span><span className="stat-dot" /> 4 مجالات</span>
+              <span><span className="stat-dot" /> 11 معيار</span>
+              <span><span className="stat-dot" /> 52 مؤشر</span>
+              <span><span className="stat-dot" /> {overallProgress ? `${overallProgress.progress}% إنجاز` : '—'}</span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
               {/* School Info */}
-              <div className="flex flex-col items-center sm:items-start gap-3">
+              <div className="flex flex-col items-center sm:items-start gap-3 footer-column-separator">
                 <div className="flex items-center gap-3">
                   <img src="/logo.png" alt="شعار مدارس قرطبة" className="h-10 w-10 object-contain brightness-0 invert" />
                   <span className="font-bold text-lg">مدارس قرطبة الأهلية</span>
@@ -696,7 +734,7 @@ export default function QurtubahApp() {
                 <p className="text-xs text-sky-400/70">العام الدراسي 2025-2026</p>
               </div>
               {/* Quick Links */}
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-3 footer-column-separator">
                 <h4 className="font-semibold text-sky-200 mb-1">روابط سريعة</h4>
                 <div className="footer-dot-separator">
                   <button onClick={navigateHome} className="text-sm text-sky-300 hover:text-white transition-colors flex items-center gap-2 footer-link">
@@ -873,6 +911,25 @@ export default function QurtubahApp() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Back-to-Top Floating Button */}
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.button
+            key="back-to-top"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.25 }}
+            onClick={scrollToTop}
+            className="fixed bottom-6 left-6 z-50 h-11 w-11 rounded-full bg-gradient-to-b from-sky-500 to-sky-600 dark:from-sky-600 dark:to-sky-700 text-white shadow-lg shadow-sky-500/30 dark:shadow-sky-700/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform duration-200 no-print"
+            aria-label="العودة للأعلى"
+            title="العودة للأعلى"
+          >
+            <ArrowUp className="h-5 w-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

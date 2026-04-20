@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Building2, Search, X, ChevronLeft, CheckCircle2, AlertCircle,
   Circle, Eye, Upload, Trophy, Clock, BarChart3,
@@ -18,6 +18,8 @@ import { RecentActivity } from './RecentActivity';
 import { DomainComparisonTable } from './DomainComparisonTable';
 import { DomainRadarChart } from './DomainRadarChart';
 import { QuickStatsWidget } from './QuickStatsWidget';
+import { AttentionWidget } from './AttentionWidget';
+import { DueDateTracker } from './DueDateTracker';
 import { domainBarColors, domainGradients, iconMap } from './constants';
 import type { FieldWithDetails, ProgressData } from './types';
 
@@ -27,13 +29,34 @@ export function HomePage({
   overallProgress,
   onFieldClick,
   onRefresh,
+  onQuickAddEvidence,
 }: {
   fields: FieldWithDetails[];
   overallProgress: ProgressData | null;
   onFieldClick: (id: string) => void;
   onRefresh?: () => Promise<void>;
+  onQuickAddEvidence?: (indicatorId: string) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const scrollRevealRef = useRef<HTMLDivElement>(null);
+
+  // IntersectionObserver for scroll reveal animations
+  useEffect(() => {
+    if (!scrollRevealRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    const elements = scrollRevealRef.current.querySelectorAll('.scroll-reveal, .scroll-reveal-up, .scroll-reveal-scale');
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [fields, overallProgress]);
 
   const filteredFields = fields.filter((f) =>
     f.name.includes(searchTerm) || (f.description && f.description.includes(searchTerm))
@@ -42,7 +65,7 @@ export function HomePage({
   const totalEvidence = fields.reduce((sum, f) => sum + f.totalUploaded, 0);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" ref={scrollRevealRef}>
       {/* Summary Stats Banner */}
       {overallProgress && (
         <div className="mb-6 py-1.5 px-4 rounded-lg bg-gradient-to-l from-sky-100 via-sky-50 to-sky-100 dark:from-slate-800 dark:via-slate-800/80 dark:to-slate-800 border border-sky-200/50 dark:border-slate-700/50 animate-fade-in">
@@ -91,6 +114,16 @@ export function HomePage({
         <OverallProgressCard overallProgress={overallProgress} onRefresh={onRefresh} fields={fields} />
       )}
 
+      {/* Attention Widget - What Needs Attention */}
+      <div className="mt-6">
+        <AttentionWidget fields={fields} onQuickAdd={onQuickAddEvidence} />
+      </div>
+
+      {/* Due Date Tracker - Upcoming and Overdue */}
+      <div className="mt-4">
+        <DueDateTracker fields={fields} onViewField={onFieldClick} />
+      </div>
+
       {/* Progress Milestones */}
       {overallProgress && (
         <ProgressMilestones progress={overallProgress.progress} />
@@ -129,7 +162,7 @@ export function HomePage({
           return (
             <Card
               key={field.id}
-              className={`cursor-pointer domain-card-hover card-hover-shimmer transition-all duration-300 border-sky-200 dark:border-slate-700 hover:border-sky-400 group overflow-hidden animate-fade-in stagger-${index + 1} relative`}
+              className={`cursor-pointer domain-card-hover card-hover-shimmer transition-all duration-300 border-sky-200 dark:border-slate-700 hover:border-sky-400 group overflow-hidden animate-fade-in stagger-${index + 1} relative ${field.progress === 100 ? 'domain-card-complete' : field.progress > 0 ? 'domain-card-breathe' : ''}`}
               onClick={() => onFieldClick(field.id)}
               style={{ ['--domain-color' as string]: domainBarColors[originalIndex % 4] }}
             >
@@ -242,7 +275,7 @@ export function HomePage({
 
       {/* Data Visualization Charts Section */}
       {overallProgress && (
-        <div className="mt-6 sm:mt-10 space-y-4 sm:space-y-6 px-0 sm:px-0">
+        <div className="mt-6 sm:mt-10 space-y-4 sm:space-y-6 px-0 sm:px-0 scroll-reveal-up">
           <h3 className="text-xl font-bold text-sky-900 dark:text-sky-100 animate-fade-in heading-decorated">التحليل البصري</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <HorizontalBarChart fields={fields} />
@@ -255,18 +288,18 @@ export function HomePage({
       )}
 
       {/* Domain Radar Chart */}
-      <div className="mt-6 sm:mt-10">
+      <div className="mt-6 sm:mt-10 scroll-reveal-scale">
         <DomainRadarChart fields={fields} />
       </div>
 
       {/* Recent Activity Section */}
-      <div className="mt-10">
+      <div className="mt-10 scroll-reveal-up">
         <RecentActivity fields={fields} onFieldClick={onFieldClick} />
       </div>
 
       {/* Statistics Section */}
       {overallProgress && (
-        <div className="mt-10 animate-slide-up">
+        <div className="mt-10 animate-slide-up scroll-reveal-up">
           <h3 className="text-xl font-bold text-sky-900 dark:text-sky-100 mb-4 heading-decorated">إحصائيات سريعة</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Card className="border-sky-200 dark:border-slate-700 text-center p-4 card-lift stats-card-enhanced">

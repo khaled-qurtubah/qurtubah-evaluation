@@ -82,6 +82,7 @@ export function FieldDetailView({
   const [evidenceStatus, setEvidenceStatus] = useState('draft');
   const [evidencePriority, setEvidencePriority] = useState('medium');
   const [evidenceComments, setEvidenceComments] = useState('');
+  const [evidenceDueDate, setEvidenceDueDate] = useState('');
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [pdfViewerFile, setPdfViewerFile] = useState<{ name: string; url: string } | null>(null);
 
@@ -101,6 +102,7 @@ export function FieldDetailView({
     setEvidenceStatus('draft');
     setEvidencePriority('medium');
     setEvidenceComments('');
+    setEvidenceDueDate('');
     setEvidenceDialogOpen(true);
   };
 
@@ -114,6 +116,7 @@ export function FieldDetailView({
     setEvidenceStatus(evidence.status || 'draft');
     setEvidencePriority(evidence.priority || 'medium');
     setEvidenceComments(evidence.comments || '');
+    setEvidenceDueDate(evidence.dueDate ? new Date(evidence.dueDate).toISOString().split('T')[0] : '');
     setEvidenceDialogOpen(true);
   };
 
@@ -188,6 +191,7 @@ export function FieldDetailView({
             status: evidenceStatus,
             priority: evidencePriority,
             comments: evidenceComments || null,
+            dueDate: evidenceDueDate || null,
             ...(filePath && { filePath, fileName }),
           }),
         });
@@ -209,6 +213,7 @@ export function FieldDetailView({
             status: evidenceStatus,
             priority: evidencePriority,
             comments: evidenceComments || null,
+            dueDate: evidenceDueDate || null,
             indicatorId: selectedIndicatorId,
           }),
         });
@@ -773,7 +778,7 @@ export function FieldDetailView({
                               {indicator.evidences.map((ev) => (
                                 <div
                                   key={ev.id}
-                                  className={`evidence-card flex items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-sm ${evidencePriorityClasses[ev.status] || ''} ${selectedEvidenceIds.has(ev.id) ? 'ring-2 ring-sky-400 dark:ring-sky-500 bg-sky-50 dark:bg-slate-750' : ''}`}
+                                  className={`evidence-card evidence-card-enhanced evidence-status-${ev.status || 'draft'} flex items-center gap-2 p-2.5 rounded-xl border border-sky-100 dark:border-slate-700 text-sm ${selectedEvidenceIds.has(ev.id) ? 'ring-2 ring-sky-400 dark:ring-sky-500 bg-sky-50 dark:bg-slate-750' : ''}`}
                                 >
                                   {/* Feature A: Checkbox for bulk selection */}
                                   <Checkbox
@@ -788,15 +793,15 @@ export function FieldDetailView({
 
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
                                     {ev.filePath ? (
-                                      <div className="p-1 rounded bg-red-50 dark:bg-red-900/20">
+                                      <div className="evidence-type-icon bg-red-50 dark:bg-red-900/20">
                                         <FileText className="h-4 w-4 text-red-500 shrink-0" />
                                       </div>
                                     ) : ev.link ? (
-                                      <div className="p-1 rounded bg-blue-50 dark:bg-blue-900/20">
-                                        <Link2 className="h-4 w-4 text-blue-500 shrink-0" />
+                                      <div className="evidence-type-icon bg-teal-50 dark:bg-teal-900/20">
+                                        <Link2 className="h-4 w-4 text-teal-500 shrink-0" />
                                       </div>
                                     ) : (
-                                      <div className="p-1 rounded bg-sky-50 dark:bg-sky-900/20">
+                                      <div className="evidence-type-icon bg-sky-50 dark:bg-sky-900/20">
                                         <FileText className="h-4 w-4 text-sky-500 shrink-0" />
                                       </div>
                                     )}
@@ -809,6 +814,30 @@ export function FieldDetailView({
                                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${priorityColors[ev.priority] || priorityColors.medium}`}>
                                           {priorityLabels[ev.priority] || priorityLabels.medium}
                                         </span>
+                                        {ev.dueDate && (() => {
+                                          const dueDate = new Date(ev.dueDate);
+                                          const now = new Date();
+                                          const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                                          const isOverdue = daysUntilDue < 0;
+                                          const isDueSoon = daysUntilDue >= 0 && daysUntilDue <= 7;
+                                          if (isOverdue) {
+                                            return (
+                                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 shrink-0 animate-pulse">
+                                                <AlertTriangle className="h-2.5 w-2.5" />
+                                                متأخر
+                                              </span>
+                                            );
+                                          }
+                                          if (isDueSoon) {
+                                            return (
+                                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 shrink-0">
+                                                <Clock className="h-2.5 w-2.5" />
+                                                {daysUntilDue === 0 ? 'اليوم' : `باقي ${daysUntilDue} يوم`}
+                                              </span>
+                                            );
+                                          }
+                                          return null;
+                                        })()}
                                         {ev.comments && (
                                           <TooltipProvider>
                                             <Tooltip>
@@ -1053,6 +1082,22 @@ export function FieldDetailView({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="evidence-due-date">تاريخ الاستحقاق</Label>
+              <Input
+                id="evidence-due-date"
+                type="date"
+                value={evidenceDueDate}
+                onChange={(e) => setEvidenceDueDate(e.target.value)}
+                className="dark:bg-slate-800 dark:border-slate-700"
+              />
+              {evidenceDueDate && new Date(evidenceDueDate) < new Date() && (
+                <p className="text-[11px] text-red-500 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  هذا التاريخ قد مر بالفعل
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="evidence-comments">ملاحظات / تعليقات</Label>

@@ -50,7 +50,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description, link, fileName, filePath, status, priority, comments } = body;
+    const { name, description, link, fileName, filePath, status, priority, comments, dueDate } = body;
 
     // Get the existing evidence name for activity log
     const existing = await db.evidence.findUnique({ where: { id } });
@@ -67,6 +67,7 @@ export async function PUT(
         ...(status !== undefined && { status }),
         ...(priority !== undefined && { priority }),
         ...(comments !== undefined && { comments }),
+        ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
       },
     });
 
