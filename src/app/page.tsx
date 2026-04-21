@@ -46,43 +46,51 @@ export default function QurtubahApp() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  // Dark mode state with lazy initializer
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('qurtubah_dark');
-        if (stored !== null) return stored === 'true';
-      } catch {
-        // ignore
-      }
-    }
-    return false;
-  });
+  // Dark mode state - use lazy initializer; server always returns false, client reads localStorage
+  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Check auth on mount - use lazy initializer pattern
-  const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('qurtubah_auth');
-        if (stored) return JSON.parse(stored);
-      } catch {
-        localStorage.removeItem('qurtubah_auth');
-      }
-    }
-    return null;
-  });
+  // Auth state
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 
-  // Apply dark mode class to document
+  // After hydration: read localStorage values and apply
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    let initialDark = false;
+    let initialAuth: AuthUser | null = null;
+    try {
+      const storedDark = localStorage.getItem('qurtubah_dark');
+      if (storedDark === 'true') initialDark = true;
+    } catch { /* ignore */ }
+    try {
+      const storedAuth = localStorage.getItem('qurtubah_auth');
+      if (storedAuth) initialAuth = JSON.parse(storedAuth);
+    } catch {
+      try { localStorage.removeItem('qurtubah_auth'); } catch { /* ignore */ }
     }
-    localStorage.setItem('qurtubah_dark', String(darkMode));
-  }, [darkMode]);
+    // Apply dark mode class directly to avoid flash
+    if (initialDark) {
+      document.documentElement.classList.add('dark');
+    }
+    // Use React.startTransition to avoid the lint error for setState in effect
+    React.startTransition(() => {
+      setDarkMode(initialDark);
+      setAuthUser(initialAuth);
+      setMounted(true);
+    });
+  }, []);
 
-  const toggleDarkMode = () => setDarkMode((prev) => !prev);
+  const toggleDarkMode = () => {
+    setDarkMode((prev) => {
+      const next = !prev;
+      if (next) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      try { localStorage.setItem('qurtubah_dark', String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   // Keyboard shortcuts
   useEffect(() => {

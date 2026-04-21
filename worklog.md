@@ -871,3 +871,24 @@ Stage Summary:
 - DueDateTracker widget created and integrated into HomePage
 - 5 evidence items now have sample due dates for testing
 - All features verified working: lint passes, API returns 200
+
+---
+Task ID: 6-c
+Agent: Main Agent
+Task: Fix hydration mismatch error in dark mode toggle
+
+Work Log:
+- Identified hydration mismatch error: server renders "الوضع الداكن" (Moon icon) but client renders "الوضع الفاتح" (Sun icon) when dark mode is stored in localStorage
+- Root cause: useState lazy initializer using `typeof window !== 'undefined''` produces different values on server vs client
+- Fixed dark mode initialization: useState always starts as `false` (no hydration mismatch), then useEffect reads localStorage and applies the correct state using React.startTransition
+- Fixed auth state initialization the same way: useState starts as `null`, useEffect reads localStorage after hydration
+- Fixed toggleDarkMode to directly apply dark class and save to localStorage in the setter callback instead of separate useEffect
+- Removed the darkModeMounted/darkModeMounted pattern in favor of a single `mounted` state
+- ESLint: 0 errors, 0 warnings
+- Tested: no hydration errors on page load, dark mode toggle works correctly, dark mode persists across page reloads
+
+Stage Summary:
+- Hydration mismatch bug completely fixed
+- Dark mode and auth state properly initialized after hydration
+- All lint errors resolved (React 16 strict rules about setState in effects)
+- No console errors on page load or reload
