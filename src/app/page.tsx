@@ -31,17 +31,7 @@ export default function QurtubahApp() {
   const [overallProgress, setOverallProgress] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('qurtubah_notifications');
-        if (stored) return JSON.parse(stored);
-      } catch {
-        // ignore
-      }
-    }
-    return [];
-  });
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -53,10 +43,15 @@ export default function QurtubahApp() {
   // Auth state
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 
+  // Help onboarding dismissed state
+  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(false);
+
   // After hydration: read localStorage values and apply
   useEffect(() => {
     let initialDark = false;
     let initialAuth: AuthUser | null = null;
+    let initialNotifications: AppNotification[] = [];
+    let initialOnboardingDismissed = false;
     try {
       const storedDark = localStorage.getItem('qurtubah_dark');
       if (storedDark === 'true') initialDark = true;
@@ -67,6 +62,13 @@ export default function QurtubahApp() {
     } catch {
       try { localStorage.removeItem('qurtubah_auth'); } catch { /* ignore */ }
     }
+    try {
+      const storedNotifications = localStorage.getItem('qurtubah_notifications');
+      if (storedNotifications) initialNotifications = JSON.parse(storedNotifications);
+    } catch { /* ignore */ }
+    try {
+      initialOnboardingDismissed = localStorage.getItem('qurtubah_onboarding_dismissed') === 'true';
+    } catch { /* ignore */ }
     // Apply dark mode class directly to avoid flash
     if (initialDark) {
       document.documentElement.classList.add('dark');
@@ -76,6 +78,8 @@ export default function QurtubahApp() {
       setDarkMode(initialDark);
       setAuthUser(initialAuth);
       setMounted(true);
+      setNotifications(initialNotifications);
+      setOnboardingDismissed(initialOnboardingDismissed);
     });
   }, []);
 
@@ -266,18 +270,6 @@ export default function QurtubahApp() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  // Help onboarding dismissed state
-  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        return localStorage.getItem('qurtubah_onboarding_dismissed') === 'true';
-      } catch {
-        // ignore
-      }
-    }
-    return false;
-  });
-
   const handleLogin = (user: AuthUser) => {
     setAuthUser(user);
     localStorage.setItem('qurtubah_auth', JSON.stringify(user));
@@ -407,10 +399,10 @@ export default function QurtubahApp() {
                 size="icon"
                 onClick={toggleDarkMode}
                 className="btn-press ml-1"
-                title={darkMode ? 'الوضع الفاتح' : 'الوضع الداكن'}
+                title={mounted ? (darkMode ? 'الوضع الفاتح' : 'الوضع الداكن') : 'الوضع الداكن'}
               >
-                <span className="dark-mode-icon" style={{ transform: darkMode ? 'rotate(360deg)' : 'rotate(0deg)' }}>
-                  {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-600" />}
+                <span className="dark-mode-icon" style={{ transform: mounted && darkMode ? 'rotate(360deg)' : 'rotate(0deg)' }}>
+                  {mounted && darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-600" />}
                 </span>
               </Button>
               {/* Help Button */}
@@ -489,8 +481,8 @@ export default function QurtubahApp() {
                 onClick={toggleDarkMode}
                 className="btn-press"
               >
-                <span className="dark-mode-icon" style={{ transform: darkMode ? 'rotate(360deg)' : 'rotate(0deg)' }}>
-                  {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-600" />}
+                <span className="dark-mode-icon" style={{ transform: mounted && darkMode ? 'rotate(360deg)' : 'rotate(0deg)' }}>
+                  {mounted && darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-sky-600" />}
                 </span>
               </Button>
               <Button
@@ -812,7 +804,7 @@ export default function QurtubahApp() {
       </footer>
 
       {/* Mobile Notification Dropdown - shown as dialog on mobile */}
-      <Dialog open={notificationOpen && typeof window !== 'undefined' && window.innerWidth < 768} onOpenChange={setNotificationOpen}>
+      <Dialog open={notificationOpen && mounted && typeof window !== 'undefined' && window.innerWidth < 768} onOpenChange={setNotificationOpen}>
         <DialogContent className="sm:max-w-md" dir="rtl">
           <DialogHeader>
             <div className="flex items-center justify-between">

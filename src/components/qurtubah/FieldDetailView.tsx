@@ -5,7 +5,7 @@ import {
   Building2, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, FileText, Link2, Upload,
   CheckCircle2, Circle, BarChart3, Eye, Download, Loader2, Filter, ExternalLink,
   ClipboardList, Clock, TrendingUp, MessageSquare, X, StickyNote, CheckSquare, Square as SquareIcon,
-  AlertTriangle,
+  AlertTriangle, Printer,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -340,8 +340,240 @@ export function FieldDetailView({
   const hasSelectedEvidence = selectedEvidenceIds.size > 0;
   const allEvidenceSelected = allFieldEvidence.length > 0 && selectedEvidenceIds.size === allFieldEvidence.length;
 
+  // Domain color mapping for print and CSS custom properties
+  const domainColorMap: Record<string, { primary: string; light: string; dark: string }> = {
+    '0': { primary: '#0ea5e9', light: '#e0f2fe', dark: '#0369a1' }, // sky - الإدارة المدرسية
+    '1': { primary: '#14b8a6', light: '#ccfbf1', dark: '#0d9488' }, // teal - التعليم والتعلم
+    '2': { primary: '#f59e0b', light: '#fef3c7', dark: '#b45309' }, // amber - نواتج التعلم
+    '3': { primary: '#10b981', light: '#d1fae5', dark: '#047857' }, // emerald - البيئة المدرسية
+  };
+  const domainColorIdx = String((field.order - 1) % 4);
+  const domainColorSet = domainColorMap[domainColorIdx] || domainColorMap['0'];
+
+  // ============ Part A: Domain Print Report ============
+  const handleDomainPrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const domainColor = domainColorSet.primary;
+    const domainColorLight = domainColorSet.light;
+    const domainColorDark = domainColorSet.dark;
+
+    // Standard-by-standard breakdown
+    const standardRows = field.standards.map((s) => {
+      const sIndicators = s.indicators;
+      const sRequired = sIndicators.reduce((sum, ind) => sum + ind.requiredEvidence, 0);
+      const sUploaded = sIndicators.reduce((sum, ind) => sum + ind.evidences.length, 0);
+      const sCompleted = sIndicators.filter((ind) => ind.evidences.length >= ind.requiredEvidence).length;
+      const sProgress = sRequired > 0 ? Math.round((sUploaded / sRequired) * 100) : 0;
+      return `
+        <tr>
+          <td style="padding:8px;border:1px solid #e2e8f0;font-size:12px;font-weight:bold;">${s.name}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0;font-size:12px;text-align:center;">${sIndicators.length}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0;font-size:12px;text-align:center;">${sCompleted}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0;font-size:12px;text-align:center;">${sUploaded} / ${sRequired}</td>
+          <td style="padding:8px;border:1px solid #e2e8f0;font-size:12px;text-align:center;font-weight:bold;color:${sProgress === 100 ? '#10b981' : sProgress >= 50 ? '#f59e0b' : domainColor}">${sProgress}%</td>
+        </tr>
+      `;
+    }).join('');
+
+    // Indicator status table
+    const indicatorRows = field.standards.flatMap((s) =>
+      s.indicators.map((ind) => {
+        const isComplete = ind.evidences.length >= ind.requiredEvidence;
+        return `
+          <tr>
+            <td style="padding:6px;border:1px solid #e2e8f0;font-size:11px;">${ind.name}</td>
+            <td style="padding:6px;border:1px solid #e2e8f0;font-size:11px;text-align:center;">${s.name}</td>
+            <td style="padding:6px;border:1px solid #e2e8f0;font-size:11px;text-align:center;">${ind.evidences.length} / ${ind.requiredEvidence}</td>
+            <td style="padding:6px;border:1px solid #e2e8f0;font-size:11px;text-align:center;color:${isComplete ? '#10b981' : '#ef4444'};font-weight:bold;">${isComplete ? 'مكتمل ✓' : 'غير مكتمل'}</td>
+          </tr>
+        `;
+      })
+    ).join('');
+
+    // Evidence status distribution
+    const allEv = field.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences));
+    const draftCount = allEv.filter((e) => e.status === 'draft').length;
+    const submittedCount = allEv.filter((e) => e.status === 'submitted').length;
+    const approvedCount = allEv.filter((e) => e.status === 'approved').length;
+
+    // Auto-generated improvement recommendations
+    const incompleteIndicators = field.standards.flatMap((s) =>
+      s.indicators
+        .filter((ind) => ind.evidences.length < ind.requiredEvidence)
+        .map((ind) => ({
+          name: ind.name,
+          needsMore: ind.requiredEvidence - ind.evidences.length,
+        }))
+    );
+    const incompleteStandards = field.standards
+      .map((s) => {
+        const sReq = s.indicators.reduce((sum, ind) => sum + ind.requiredEvidence, 0);
+        const sUp = s.indicators.reduce((sum, ind) => sum + ind.evidences.length, 0);
+        const sProg = sReq > 0 ? Math.round((sUp / sReq) * 100) : 0;
+        return { name: s.name, progress: sProg };
+      })
+      .filter((s) => s.progress < 100);
+
+    const recommendationItems = [
+      ...incompleteIndicators.map((ind) => `<li style="margin-bottom:6px;font-size:12px;">المؤشر <strong>${ind.name}</strong> يحتاج <strong style="color:#ef4444">${ind.needsMore}</strong> شواهد إضافية</li>`),
+      ...incompleteStandards.map((s) => `<li style="margin-bottom:6px;font-size:12px;">المعيار <strong>${s.name}</strong> مكتمل بنسبة <strong style="color:${s.progress >= 50 ? '#f59e0b' : '#ef4444'}">${s.progress}%</strong></li>`),
+    ].join('');
+
+    // Strengths (completed standards)
+    const completedStandards = field.standards
+      .map((s) => {
+        const sReq = s.indicators.reduce((sum, ind) => sum + ind.requiredEvidence, 0);
+        const sUp = s.indicators.reduce((sum, ind) => sum + ind.evidences.length, 0);
+        const sProg = sReq > 0 ? Math.round((sUp / sReq) * 100) : 0;
+        return { name: s.name, progress: sProg };
+      })
+      .filter((s) => s.progress === 100);
+
+    const strengthItems = completedStandards.length > 0
+      ? completedStandards.map((s) => `<li style="margin-bottom:6px;font-size:12px;"><strong style="color:#10b981">✓</strong> ${s.name} <span style="color:#10b981;font-weight:bold;">(مكتمل 100%)</span></li>`).join('')
+      : '<li style="font-size:12px;color:#94a3b8;">لا توجد معايير مكتملة حتى الآن</li>';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>تقرير مجال ${field.name} - مدارس قرطبة</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; padding: 30px; color: #1e293b; line-height: 1.6; }
+          h1 { color: ${domainColorDark}; border-bottom: 3px solid ${domainColor}; padding-bottom: 10px; }
+          h2 { color: ${domainColorDark}; margin-top: 30px; border-bottom: 1px solid ${domainColorLight}; padding-bottom: 6px; }
+          h3 { color: ${domainColor}; margin-top: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background: ${domainColorLight}; padding: 10px; border: 1px solid #e2e8f0; font-weight: bold; color: ${domainColorDark}; }
+          .header { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+          .header img { height: 60px; }
+          .domain-banner { background: linear-gradient(135deg, ${domainColorLight}, #fff); border: 2px solid ${domainColor}; border-radius: 12px; padding: 20px; margin: 20px 0; display: flex; align-items: center; gap: 20px; }
+          .domain-progress-ring { width: 90px; height: 90px; border-radius: 50%; border: 6px solid ${domainColorLight}; border-top-color: ${domainColor}; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; color: ${domainColorDark}; }
+          .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+          .stat-box { background: ${domainColorLight}; border-radius: 8px; padding: 15px; text-align: center; border: 1px solid ${domainColor}33; }
+          .stat-box .value { font-size: 28px; font-weight: bold; color: ${domainColorDark}; }
+          .stat-box .label { font-size: 12px; color: #64748b; }
+          .evidence-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+          .evidence-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; text-align: center; }
+          .evidence-item .count { font-size: 22px; font-weight: bold; }
+          .evidence-item .lbl { font-size: 11px; color: #64748b; }
+          .recommendations { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px; margin: 15px 0; }
+          .recommendations h3 { color: #991b1b; }
+          .strengths { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px; margin: 15px 0; }
+          .strengths h3 { color: #166534; }
+          .signature-section { margin-top: 40px; border-top: 2px solid #e2e8f0; padding-top: 20px; }
+          .signature-line { display: inline-block; width: 200px; border-bottom: 1px solid #1e293b; margin-top: 40px; }
+          footer { margin-top: 40px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+          @page { margin: 1.5cm; }
+          @media print {
+            body { padding: 15px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <img src="/logo.png" alt="شعار مدارس قرطبة" onerror="this.style.display='none'" />
+          <div>
+            <h1 style="margin:0;border:none;padding:0;">تقرير مجال: ${field.name}</h1>
+            <p style="color:#64748b;margin:5px 0;">مدارس قرطبة الأهلية – مجمع أبحر</p>
+            <p style="color:${domainColor};font-size:12px;">معايير هيئة تقويم التعليم 2026 | تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
+          </div>
+        </div>
+
+        <div class="domain-banner">
+          <div class="domain-progress-ring">${field.progress}%</div>
+          <div>
+            <h2 style="margin:0;border:none;padding:0;">${field.name}</h2>
+            <p style="color:#64748b;font-size:13px;">${field.description || ''}</p>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat-box"><div class="value">${field.standardsCount}</div><div class="label">المعايير</div></div>
+          <div class="stat-box"><div class="value">${field.indicatorsCount}</div><div class="label">المؤشرات</div></div>
+          <div class="stat-box"><div class="value">${field.completedIndicators}</div><div class="label">مكتملة</div></div>
+          <div class="stat-box"><div class="value">${field.totalUploaded} / ${field.totalRequired}</div><div class="label">الشواهد</div></div>
+        </div>
+
+        <h2>تفاصيل المعايير</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>المعيار</th>
+              <th>المؤشرات</th>
+              <th>مكتملة</th>
+              <th>الشواهد</th>
+              <th>النسبة</th>
+            </tr>
+          </thead>
+          <tbody>${standardRows}</tbody>
+        </table>
+
+        <h2>حالة المؤشرات</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>المؤشر</th>
+              <th>المعيار</th>
+              <th>الشواهد</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>${indicatorRows}</tbody>
+        </table>
+
+        <h2>توزيع حالات الشواهد</h2>
+        <div class="evidence-summary">
+          <div class="evidence-item"><div class="count" style="color:#94a3b8">${draftCount}</div><div class="lbl">مسودة</div></div>
+          <div class="evidence-item"><div class="count" style="color:#f59e0b">${submittedCount}</div><div class="lbl">مقدّم</div></div>
+          <div class="evidence-item"><div class="count" style="color:#10b981">${approvedCount}</div><div class="lbl">معتمد</div></div>
+        </div>
+
+        <div class="recommendations">
+          <h3>🔄 توصيات التحسين</h3>
+          <ul style="padding-right:20px;margin:10px 0;">${recommendationItems || '<li style="font-size:12px;color:#10b981;">جميع المؤشرات مكتملة - ممتاز!</li>'}</ul>
+        </div>
+
+        <div class="strengths">
+          <h3>✅ نقاط القوة</h3>
+          <ul style="padding-right:20px;margin:10px 0;">${strengthItems}</ul>
+        </div>
+
+        <div class="signature-section">
+          <div style="display:flex;justify-content:space-between;">
+            <div>
+              <p style="font-size:12px;color:#64748b;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
+            </div>
+            <div>
+              <span style="font-size:12px;color:#64748b;">التوقيع: </span>
+              <span class="signature-line"></span>
+            </div>
+          </div>
+        </div>
+
+        <footer>
+          مدارس قرطبة الأهلية – مجمع أبحر | تقرير تقويم التعليم 2026 | ${field.name}
+        </footer>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); }, 300);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 domain-themed domain-gradient-bg"
+      style={{
+        '--domain-color': domainColorSet.primary,
+        '--domain-color-light': domainColorSet.light,
+        '--domain-color-dark': domainColorSet.dark,
+      } as React.CSSProperties}
+    >
       {/* Breadcrumb Navigation */}
       <div className="flex items-center gap-2 mb-6 animate-fade-in flex-wrap">
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1 text-sky-600 dark:text-sky-400 btn-press">
@@ -350,9 +582,28 @@ export function FieldDetailView({
         </Button>
         <ChevronLeft className="h-3.5 w-3.5 text-sky-400 dark:text-sky-500" />
         <span className="text-sm font-medium text-sky-800 dark:text-sky-200">{field.name}</span>
+        {/* Domain Report Button */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-8 mr-auto border-sky-200 dark:border-slate-700 btn-press"
+                onClick={handleDomainPrint}
+              >
+                <Printer className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">تقرير المجال</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" dir="rtl">
+              طباعة تقرير تفصيلي لهذا المجال
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         {/* Domain Quick Switch Dropdown */}
         {onNavigateToField && fields.length > 1 && (
-          <div className="mr-auto">
+          <div>
             <Select
               value={field.id}
               onValueChange={(val) => {
@@ -382,8 +633,8 @@ export function FieldDetailView({
       </div>
 
       {/* Field Header - Hero Banner */}
-      <Card className="mb-8 border-sky-200 dark:border-slate-700 overflow-hidden animate-slide-up shadow-lg relative">
-        <div className={`h-3 bg-gradient-to-l ${domainColors.from} ${domainColors.to} relative overflow-hidden`}>
+      <Card className="mb-8 border-sky-200 dark:border-slate-700 overflow-hidden animate-slide-up shadow-lg relative domain-card-border">
+        <div className={`h-3 bg-gradient-to-l ${domainColors.from} ${domainColors.to} relative overflow-hidden domain-accent-bar`}>
           <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 12px, rgba(255,255,255,0.3) 12px, rgba(255,255,255,0.3) 14px)' }} />
         </div>
         <CardHeader className={`bg-gradient-to-l ${domainColors.bg}/50 to-white dark:to-slate-900`}>
@@ -407,7 +658,7 @@ export function FieldDetailView({
           </div>
         </CardHeader>
         <CardContent className={`pt-0 bg-gradient-to-l ${domainColors.bg}/30 to-white dark:to-slate-900 relative`}>
-          <Progress value={field.progress} className={`h-3 mb-3 domain-card-progress progress-color-${['sky', 'teal', 'amber', 'emerald'][(field.order - 1) % 4]} progress-animated ${field.progress === 100 ? 'progress-complete' : ''}`} />
+          <Progress value={field.progress} className={`h-3 mb-3 domain-card-progress progress-color-${['sky', 'teal', 'amber', 'emerald'][(field.order - 1) % 4]} progress-animated ${field.progress === 100 ? 'progress-complete' : ''} progress-bounce`} />
           <div className={`flex flex-wrap items-center gap-4 text-sm ${domainColors.text}`}>
             <div className="flex items-center gap-1.5 bg-white/70 dark:bg-slate-800/70 px-3 py-1 rounded-lg">
               <BarChart3 className={`h-4 w-4 ${domainColors.iconText}`} />
@@ -778,7 +1029,7 @@ export function FieldDetailView({
                               {indicator.evidences.map((ev) => (
                                 <div
                                   key={ev.id}
-                                  className={`evidence-card evidence-card-enhanced evidence-status-${ev.status || 'draft'} flex items-center gap-2 p-2.5 rounded-xl border border-sky-100 dark:border-slate-700 text-sm ${selectedEvidenceIds.has(ev.id) ? 'ring-2 ring-sky-400 dark:ring-sky-500 bg-sky-50 dark:bg-slate-750' : ''}`}
+                                  className={`evidence-card evidence-card-enhanced evidence-status-${ev.status || 'draft'} evidence-status-change flex items-center gap-2 p-2.5 rounded-xl border border-sky-100 dark:border-slate-700 text-sm ${selectedEvidenceIds.has(ev.id) ? 'ring-2 ring-sky-400 dark:ring-sky-500 bg-sky-50 dark:bg-slate-750' : ''}`}
                                 >
                                   {/* Feature A: Checkbox for bulk selection */}
                                   <Checkbox

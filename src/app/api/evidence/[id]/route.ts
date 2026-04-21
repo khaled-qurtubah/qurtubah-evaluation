@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { saveProgressSnapshot } from '@/lib/snapshot';
 
 // Helper to log activity
 async function logActivity(action: string, entityType: string, entityId: string, entityName: string, details?: string, userName?: string) {
@@ -84,6 +85,9 @@ export async function PUT(
 
     await logActivity('update', 'evidence', id, entityName, details);
 
+    // Save progress snapshot after evidence update
+    await saveProgressSnapshot();
+
     return NextResponse.json(evidence);
   } catch (error) {
     console.error('Error updating evidence:', error);
@@ -106,6 +110,9 @@ export async function DELETE(
 
     // Log activity
     await logActivity('delete', 'evidence', id, entityName, 'تم حذف الشاهد');
+
+    // Save progress snapshot after evidence deletion
+    await saveProgressSnapshot();
 
     return NextResponse.json({ success: true });
   } catch (error) {

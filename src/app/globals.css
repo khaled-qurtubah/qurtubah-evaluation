@@ -4185,3 +4185,405 @@
 .dark [data-slot="card"]:hover {
   border-color: rgba(255, 255, 255, 0.15);
 }
+
+/* ============ Task 4: Celebration Animation Styles ============ */
+
+/* Celebration Overlay - full viewport fixed overlay */
+.celebration-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: celebration-overlay-in 0.3s ease-out;
+  cursor: pointer;
+}
+.dark .celebration-overlay {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+@keyframes celebration-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Confetti Container - holds all confetti particles */
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 101;
+}
+
+/* Confetti Particle - individual falling piece */
+.confetti-particle {
+  position: absolute;
+  top: -20px;
+  opacity: 0;
+  animation: confetti-fall var(--confetti-duration, 3s) ease-out var(--confetti-delay, 0s) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(15vh) translateX(var(--confetti-drift, 20px)) rotate(90deg) scale(1.1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(50vh) translateX(calc(var(--confetti-drift, 20px) * -0.5)) rotate(270deg) scale(0.9);
+  }
+  85% {
+    opacity: 0.4;
+    transform: translateY(85vh) translateX(var(--confetti-drift, 20px)) rotate(450deg) scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(105vh) translateX(calc(var(--confetti-drift, 20px) * 0.3)) rotate(540deg) scale(0.3);
+  }
+}
+
+/* Celebration Content Card - centered text card */
+.celebration-content {
+  position: relative;
+  z-index: 102;
+  text-align: center;
+  padding: 2.5rem 3rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(14, 165, 233, 0.1);
+  max-width: 420px;
+  width: 90%;
+  opacity: 0;
+  transform: scale(0.8) translateY(20px);
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: auto;
+}
+.dark .celebration-content {
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(14, 165, 233, 0.2);
+}
+
+.celebration-content-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* Achievement Badge - circular icon container */
+.celebration-badge {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  background: linear-gradient(135deg, var(--badge-color, #0ea5e9), color-mix(in srgb, var(--badge-color, #0ea5e9) 70%, white));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--badge-color, #0ea5e9) 35%, transparent);
+  animation: celebration-badge-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+}
+
+.celebration-badge-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  animation: celebration-icon-bounce 0.8s ease-out 0.5s both;
+}
+
+@keyframes celebration-badge-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes celebration-icon-bounce {
+  0% { transform: scale(0.5) rotate(-15deg); }
+  40% { transform: scale(1.2) rotate(10deg); }
+  60% { transform: scale(0.95) rotate(-5deg); }
+  80% { transform: scale(1.05) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Celebration Main Text */
+.celebration-text {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  background: linear-gradient(135deg, #0284c7, #0ea5e9, #06b6d4, #10b981);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: celebration-text-scale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both,
+             celebration-gradient-shift 3s ease infinite 0.9s;
+}
+.dark .celebration-text {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9, #2dd4bf, #34d399);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+@keyframes celebration-text-scale {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes celebration-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Celebration Subtext */
+.celebration-subtext {
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0 0 1rem;
+  animation: celebration-subtext-in 0.4s ease-out 0.6s both;
+}
+.dark .celebration-subtext {
+  color: #94a3b8;
+}
+
+@keyframes celebration-subtext-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Celebration Stars (for 100% completion) */
+.celebration-stars {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.celebration-star {
+  font-size: 1.25rem;
+  color: #f59e0b;
+  animation: celebration-star-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+@keyframes celebration-star-pop {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.3) rotate(10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Dismiss hint text */
+.celebration-dismiss {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0;
+  animation: celebration-dismiss-fade 0.4s ease-out 1s both;
+}
+.dark .celebration-dismiss {
+  color: #64748b;
+}
+
+@keyframes celebration-dismiss-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Hide celebration in print */
+@media print {
+  .celebration-overlay,
+  .confetti-container {
+    display: none !important;
+  }
+}
+
+/* ============ Task 6: Domain Color Shifting & Micro-Interactions ============ */
+
+/* --- Part B: Domain Color Shifting --- */
+
+/* Base class for domain-themed containers - reads CSS custom properties */
+.domain-themed {
+  transition: all 0.5s ease;
+}
+
+/* Card border using domain color */
+.domain-card-border {
+  border-color: var(--domain-color, #0ea5e9) !important;
+  transition: border-color 0.5s ease;
+}
+.dark .domain-card-border {
+  border-color: var(--domain-color, #0ea5e9) !important;
+}
+
+/* Accent bar using domain color */
+.domain-accent-bar {
+  background-color: var(--domain-color, #0ea5e9);
+  transition: background-color 0.5s ease;
+}
+
+/* Subtle gradient background using domain colors */
+.domain-gradient-bg {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--domain-color-light, #e0f2fe) 20%, transparent) 0%,
+    transparent 30%
+  );
+  transition: background 0.5s ease;
+}
+.dark .domain-gradient-bg {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--domain-color, #0ea5e9) 5%, transparent) 0%,
+    transparent 20%
+  );
+}
+
+/* Scrollbar thumb color matches domain */
+.domain-themed ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--domain-color, #0ea5e9), var(--domain-color-dark, #0369a1));
+  transition: background 0.5s ease;
+}
+.domain-themed ::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--domain-color, #0ea5e9) 10%, transparent);
+}
+
+/* --- Part C: Micro-Interactions --- */
+
+/* Smooth color morph when evidence status changes */
+.evidence-status-change {
+  transition: background-color 500ms ease, border-color 500ms ease, box-shadow 500ms ease;
+}
+
+/* Checkmark draw animation + particle burst for successful uploads */
+.upload-success-burst {
+  position: relative;
+  animation: upload-burst 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes upload-burst {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.upload-success-burst::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #10b981;
+  animation: upload-ring-expand 0.6s ease-out both;
+  pointer-events: none;
+}
+@keyframes upload-ring-expand {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Progress bar overshoot + settle animation when hitting milestone */
+.progress-bounce {
+  animation: progress-overshoot 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes progress-overshoot {
+  0% {
+    transform: scaleX(0.95);
+  }
+  40% {
+    transform: scaleX(1.05);
+  }
+  60% {
+    transform: scaleX(0.98);
+  }
+  80% {
+    transform: scaleX(1.01);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* Card slides out with spring physics for delete actions */
+.card-exit {
+  animation: card-exit-spring 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes card-exit-spring {
+  0% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  30% {
+    transform: translateX(8px) scale(1.02);
+  }
+  100% {
+    transform: translateX(-100%) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Domain-themed progress bars use domain color */
+.domain-themed .domain-card-progress {
+  border-color: var(--domain-color, #0ea5e9);
+}
+
+/* Domain-themed hover effects on cards */
+.domain-themed .card-lift:hover {
+  box-shadow: 0 12px 40px -8px color-mix(in srgb, var(--domain-color, #0ea5e9) 30%, transparent);
+}

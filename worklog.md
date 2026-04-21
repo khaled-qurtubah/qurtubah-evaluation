@@ -892,3 +892,197 @@ Stage Summary:
 - Dark mode and auth state properly initialized after hydration
 - All lint errors resolved (React 16 strict rules about setState in effects)
 - No console errors on page load or reload
+
+---
+Task ID: 6
+Agent: Domain Reports & Styling Agent
+Task: Add domain-specific print reports and domain color shifting
+
+Work Log:
+- Added Printer icon import to FieldDetailView.tsx
+- Added domainColorMap constant with primary/light/dark color definitions for all 4 domains (sky, teal, amber, emerald)
+- Created handleDomainPrint function that opens a new browser window with a print-friendly domain report including:
+  - School header with logo and name
+  - Domain name with progress ring styled in domain color
+  - Standard-by-standard breakdown table (name, indicators, completed, evidence, progress)
+  - Indicator status table (name, standard, evidence count, completion status)
+  - Evidence status distribution summary (draft/submitted/approved)
+  - Auto-generated improvement recommendations for incomplete indicators and standards
+  - Strengths section listing completed standards
+  - Date and signature line
+  - Footer with school info
+  - Domain-colored styling throughout (accent bar, stats, progress ring)
+- Added "تقرير المجال" button with Printer icon in breadcrumb area next to the back button
+  - Responsive: shows icon only on mobile, icon + text on desktop
+  - Tooltip: "طباعة تقرير تفصيلي لهذا المجال"
+- Added domain-themed CSS custom properties (--domain-color, --domain-color-light, --domain-color-dark) on root container
+- Applied domain-themed, domain-gradient-bg, domain-card-border, domain-accent-bar classes to FieldDetailView elements
+- Added CSS classes in globals.css:
+  - .domain-themed - base class with transition for smooth color shifting
+  - .domain-card-border - border using var(--domain-color) with transition
+  - .domain-accent-bar - accent bar using domain color
+  - .domain-gradient-bg - subtle gradient background using domain colors via color-mix
+  - Domain-themed scrollbar colors matching domain
+  - Domain-themed card hover shadow matching domain color
+- Added micro-interaction CSS classes in globals.css:
+  - .evidence-status-change - smooth color morph (500ms transition) on evidence status changes
+  - .upload-success-burst - checkmark draw animation + particle burst ring for successful uploads
+  - .progress-bounce - progress bar overshoot + settle animation
+  - .card-exit - card slides out with spring physics for delete actions
+  - Supporting keyframes: upload-burst, upload-ring-expand, progress-overshoot, card-exit-spring
+- Applied micro-interaction classes in FieldDetailView:
+  - .evidence-status-change on evidence cards
+  - .progress-bounce on the main progress bar
+- Fixed pre-existing lint errors in CelebrationEffect.tsx (setState in effect body)
+- ESLint: 0 errors, 0 warnings
+- Dev server running on port 3000
+
+Stage Summary:
+- Domain-specific print report fully functional with comprehensive Arabic RTL layout
+- Domain color shifting applied to FieldDetailView with smooth 0.5s transitions
+- CSS custom properties enable dynamic theming based on current domain
+- Micro-interaction classes added for evidence status changes, uploads, progress updates, and card exits
+- All existing functionality preserved
+
+---
+Task ID: 5
+Agent: Progress Timeline Agent
+Task: Add progress timeline with historical snapshots
+
+Work Log:
+- Added ProgressSnapshot model to Prisma schema (id, date, fieldId, progress, totalUploaded, totalRequired, completedIndicators, createdAt)
+- Ran db:push to sync the new model to the SQLite database
+- Created /src/lib/snapshot.ts with saveProgressSnapshot() helper that calculates and saves snapshots inline using Prisma directly
+- Created /api/snapshots route with GET (list all snapshots, optional fieldId filter) and POST (trigger new snapshot)
+- Added auto-snapshot calls to evidence API routes (POST create, PUT update, DELETE) after activity logging
+- Created ProgressTimeline component with Recharts AreaChart showing progress over time
+- Component features: multi-series chart (overall + per-domain), Arabic date labels, trend indicators (↑→↓), velocity metric (% per week), domain color coding, dark mode support, RTL layout, loading skeleton
+- Integrated ProgressTimeline into HomePage below the Domain Radar Chart section with "تطور التقدم عبر الزمن" header
+- Created and ran seed-snapshots.ts script generating 12 weekly snapshots (60 total records: 12 overall + 12×4 domains)
+- Snapshots show gradual progress from ~10% to current ~35% over 3 months
+- Updated db.ts to handle PrismaClient schema migration (auto-creates new client when progressSnapshot model missing)
+- Fixed PrismaClient caching issue by using direct PrismaClient instantiation in snapshot.ts and snapshots route
+- ESLint: 0 errors, 0 warnings
+- Dev server running with /api/snapshots returning 200
+
+Stage Summary:
+- Progress Timeline feature fully implemented with historical snapshot tracking
+- Auto-snapshot on evidence changes ensures timeline stays up to date
+- 60 seed data points provide 3-month historical view
+- Recharts AreaChart with domain-colored series, trends, and velocity metrics
+- All existing functionality preserved
+
+---
+Task ID: 10
+Agent: Cron Review Agent (Round 7)
+Task: QA testing, fix hydration mismatch, add new features and styling enhancements
+
+Work Log:
+- Fixed critical React Hydration mismatch error in dark mode toggle:
+  - Root cause: darkMode state initialized as false on server, but localStorage could have true on client
+  - Fixed by: using `mounted` state to guard dark mode icon rendering (Moon icon shown until client confirms)
+  - Also fixed `notifications` state: moved localStorage read from useState initializer to useEffect
+  - Also fixed `onboardingDismissed` state: same pattern - always initialize as false, read from localStorage in useEffect
+  - Fixed mobile notification Dialog: added `mounted` guard to prevent server/client mismatch
+  - Moved `onboardingDismissed` state declaration before useEffect that uses it (lint error)
+- Performed QA testing via agent-browser:
+  - Home page, domain detail, dashboard, login all working correctly
+  - Hydration mismatch confirmed FIXED - no errors in console
+  - All API endpoints returning 200
+  - Dark mode toggle working smoothly
+- Added Celebration Animations on Milestone Completion:
+  - Created CelebrationEffect component with CSS-only confetti particle burst
+  - useCelebration hook that tracks milestones in localStorage
+  - Triggers at 25%, 50%, 75%, 100% overall progress milestones
+  - Triggers when a domain reaches 100%
+  - Auto-dismisses after 4 seconds with click-to-dismiss
+  - Arabic celebration text with gradient animation
+  - Integrated into HomePage component
+- Added Progress Timeline with Historical Snapshots:
+  - Added ProgressSnapshot model to Prisma schema
+  - Created /api/snapshots API route (GET + POST)
+  - Created /src/lib/snapshot.ts helper with saveProgressSnapshot()
+  - Auto-snapshots on evidence create/update/delete operations
+  - Created ProgressTimeline component with Recharts AreaChart
+  - Multi-series chart: overall progress + one line per domain
+  - Trend indicators: ↑ improving, → flat, ↓ declining
+  - "Progress velocity" metric: % change per week
+  - Seeded 60 historical snapshots (12 weeks × 5 series)
+  - Integrated into HomePage below charts section
+- Added Domain-Specific Print Reports:
+  - "تقرير المجال" button in FieldDetailView
+  - Opens print-friendly window with domain-specific report
+  - Includes: header, progress ring, stats, standards breakdown, indicator status, evidence distribution, improvement recommendations, strengths section
+  - Auto-generated Arabic text recommendations based on incomplete indicators
+- Added Domain Color Shifting on Detail View:
+  - CSS custom properties for domain color on root container
+  - .domain-themed, .domain-card-border, .domain-accent-bar, .domain-gradient-bg classes
+  - Smooth 500ms color transition when switching domains
+  - Header accent bar, card borders, scrollbar match domain color
+- Added Micro-Interaction Polish:
+  - .evidence-status-change - smooth 500ms color morph on status change
+  - .upload-success-burst - scale + ring expand for successful uploads
+  - .progress-bounce - overshoot + settle animation on progress bars
+  - .card-exit - spring physics slide-out for delete actions
+- ESLint: 0 errors, 0 warnings
+- Dev server running on port 3000
+
+Stage Summary:
+- Critical hydration mismatch bug FIXED
+- 4 new features: Celebration animations, Progress timeline, Domain reports, Domain color shifting
+- 1 styling enhancement: Micro-interaction polish
+- 60 historical progress snapshots seeded (12 weeks of data)
+- Application more feature-rich with improved visual feedback
+
+---
+## Current Project Status (Round 7)
+
+### Description/Assessment
+The Qurtubah Schools Evaluation Website is a comprehensive, mature, and feature-rich application with professional Arabic RTL design. Round 7 fixed a critical hydration mismatch bug and added significant new features including progress timeline tracking, celebration animations, domain-specific reports, and domain color shifting.
+
+### Complete Feature List (Updated)
+- **4 Evaluation Domains** with 11 standards and 52 indicators (Education Evaluation Authority 2026)
+- **Evidence Management** - add/edit/delete with name, link, PDF upload, status tracking (draft/submitted/approved)
+- **Auto-Calculated Progress** - indicator, standard, domain, and overall levels
+- **Professional Data Visualization** - Recharts BarChart, PieChart, AreaChart (timeline), CSS completion grid, comparison table
+- **Progress Timeline** - historical snapshot tracking with trend indicators and velocity metrics
+- **Celebration Animations** - CSS confetti burst on milestone completion (25%/50%/75%/100%)
+- **Admin Dashboard** - 5-tab CRUD (fields, standards, indicators, evidence, statistics), visual summary, print/export/import
+- **Domain-Specific Reports** - print-friendly per-domain reports with improvement recommendations
+- **Statistics Panel** - evidence status donut, domain comparison, strengths/improvements analysis
+- **Authentication** - password login (qurtubah2024) + Google OAuth support (NextAuth)
+- **PDF Viewer** - in-browser viewing with download option
+- **Search & Filter** - domains, indicators, evidence by status
+- **Notification System** - bell icon, badge count, milestone/warning/info notifications
+- **Progress Milestones** - 25%/50%/75%/100% visual tracker
+- **Help/Onboarding** - dialog with usage guide
+- **Recent Activity** - expandable timeline with relative time labels
+- **Dark Mode** - full theme toggle with persistence, smooth transitions, NO hydration mismatch
+- **Domain Color Shifting** - UI adapts to domain color theme on detail view
+- **Keyboard Shortcuts** - Esc (home), Ctrl+D (dark mode)
+- **Page Transitions** - framer-motion AnimatePresence
+- **Micro-Interactions** - status change, upload success, progress bounce, card exit animations
+- **Responsive Design** - mobile-first with proper RTL Arabic support
+- **Professional UI** - Tajawal font, domain color themes, glassmorphism, Islamic patterns, animations
+
+### Verified Working (Last QA: Round 7)
+- ✅ No hydration mismatch errors
+- ✅ Home page with stats, hero, domain cards, comparison table, Recharts, milestones, timeline, activity, statistics
+- ✅ Domain detail with breadcrumb, hero, domain color shifting, accordion, evidence management, domain report
+- ✅ Dashboard with visual summary, 5 CRUD tabs, print/export/import
+- ✅ Login with password auth, Google OAuth support
+- ✅ Dark mode with smooth transitions, no flicker
+- ✅ Celebration animations on milestones
+- ✅ Progress timeline with 12 weeks of historical data
+- ✅ API endpoints all returning 200 (including /api/snapshots)
+- ✅ ESLint: 0 errors, 0 warnings
+
+### Unresolved Issues / Next Phase Priorities
+1. **Google OAuth Configuration** - Code ready, needs GOOGLE_CLIENT_ID/SECRET env vars
+2. **Multi-language Support** - Could add English interface option
+3. **Audit Trail** - Could track who added/modified evidence and when
+4. **Evidence Approval Workflow** - Could add reviewer assignment and rejection reasons
+5. **Evidence Quality Scoring** - Could add 1-5 quality rubric with weighted progress
+6. **Advanced Multi-Filter** - Could add compound filters with saved presets
+7. **Evidence File Preview/Gallery** - Could add image thumbnails and gallery view
+8. **Smart Notification Rules** - Could add browser push notifications and email digest

@@ -20,6 +20,8 @@ import { DomainRadarChart } from './DomainRadarChart';
 import { QuickStatsWidget } from './QuickStatsWidget';
 import { AttentionWidget } from './AttentionWidget';
 import { DueDateTracker } from './DueDateTracker';
+import { CelebrationEffect, useCelebration } from './CelebrationEffect';
+import { ProgressTimeline } from './ProgressTimeline';
 import { domainBarColors, domainGradients, iconMap } from './constants';
 import type { FieldWithDetails, ProgressData } from './types';
 
@@ -39,6 +41,12 @@ export function HomePage({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const scrollRevealRef = useRef<HTMLDivElement>(null);
+
+  // Celebration animation hook - triggers at milestone thresholds
+  const { isCelebrating, celebrationEvent, dismissCelebration } = useCelebration(
+    overallProgress?.progress ?? 0,
+    fields.map((f) => ({ id: f.id, name: f.name, progress: f.progress }))
+  );
 
   // IntersectionObserver for scroll reveal animations
   useEffect(() => {
@@ -292,6 +300,11 @@ export function HomePage({
         <DomainRadarChart fields={fields} />
       </div>
 
+      {/* Progress Timeline - Historical Trends */}
+      <div className="mt-6 sm:mt-10 scroll-reveal-up">
+        <ProgressTimeline fields={fields.map((f) => ({ id: f.id, name: f.name }))} />
+      </div>
+
       {/* Recent Activity Section */}
       <div className="mt-10 scroll-reveal-up">
         <RecentActivity fields={fields} onFieldClick={onFieldClick} />
@@ -336,6 +349,13 @@ export function HomePage({
 
       {/* Quick Stats Widget (Floating) */}
       <QuickStatsWidget overallProgress={overallProgress} />
+
+      {/* Celebration Animation Overlay */}
+      <CelebrationEffect
+        isVisible={isCelebrating}
+        event={celebrationEvent}
+        onDismiss={dismissCelebration}
+      />
     </div>
   );
 }

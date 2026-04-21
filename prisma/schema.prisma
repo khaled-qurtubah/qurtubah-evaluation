@@ -82,3 +82,14 @@ model ActivityLog {
   userName   String?
   createdAt  DateTime @default(now())
 }
+
+model ProgressSnapshot {
+  id                  String   @id @default(cuid())
+  date                DateTime @default(now())
+  fieldId             String?  // null = overall progress
+  progress            Float    // percentage
+  totalUploaded        Int
+  totalRequired        Int
+  completedIndicators  Int
+  createdAt           DateTime @default(now())
+}
