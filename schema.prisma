@@ -1,0 +1,16 @@
+// This is a Prisma schema file for integration with Turso database using LibSQL provider
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "libsql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    Int    @id @default(autoincrement())
+  name  String
+  email String @unique
+}
