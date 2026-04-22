@@ -1086,3 +1086,44 @@ The Qurtubah Schools Evaluation Website is a comprehensive, mature, and feature-
 6. **Advanced Multi-Filter** - Could add compound filters with saved presets
 7. **Evidence File Preview/Gallery** - Could add image thumbnails and gallery view
 8. **Smart Notification Rules** - Could add browser push notifications and email digest
+---
+Task ID: 10
+Agent: Main Agent
+Task: Disable auto-restore features, remove cron jobs, disable auto-snapshots, create comprehensive reset button
+
+Work Log:
+- Deleted cron job 110437 (Qurtubah Schools - Auto Dev Review 15min) - was running every 15 minutes
+- Deleted cron job 107675 (Qurtubah Schools - Round 7 Development Review)
+- Deleted cron job 106661 (Qurtubah Schools - Continuous Development)
+- Deleted cron job 106411 (Qurtubah Website Review - Round 7)
+- Deleted cron job 105606 (Qurtubah Schools Website - Ongoing Review)
+- All 5 cron jobs now have status: -1 (disabled/deleted)
+- Removed `saveProgressSnapshot()` import and calls from evidence POST route (`/api/evidence/route.ts`)
+- Removed `saveProgressSnapshot()` import and calls from evidence PUT and DELETE routes (`/api/evidence/[id]/route.ts`)
+- Rewrote `/api/snapshots/route.ts` to inline snapshot creation logic (no longer uses external lib)
+- Added DELETE endpoint to `/api/snapshots/route.ts` that clears all ProgressSnapshot records from database
+- Added `Math.min(100, ...)` capping on snapshot progress values
+- Enhanced Reset button in DashboardView:
+  - Now deletes all evidence
+  - Now deletes all database snapshots via DELETE /api/snapshots
+  - Now deletes all activity logs via DELETE /api/activity
+  - Now clears localStorage: qurtubah_snapshots, qurtubah_notifications, qurtubah_onboarding_dismissed
+  - Preserves dark mode preference (qurtubah_dark) and auth session (qurtubah_auth)
+  - Updated dialog description to list exactly what gets deleted
+  - Added explicit warning: percentages won't return to any previous value (like 35%) unless manually re-entered
+- ESLint: 0 errors, 0 warnings
+
+Stage Summary:
+- All 5 auto-review cron jobs permanently disabled - no more automatic data modification
+- Auto-snapshot on evidence CRUD completely removed - snapshots are now manual-only
+- Comprehensive Reset button now clears: evidence, DB snapshots, activity logs, localStorage cache
+- Progress percentages are always calculated fresh from current evidence counts (never cached/restored)
+- After reset, all progress shows 0% until new evidence is manually added
+- lib/snapshot.ts no longer imported anywhere (dead code, can be removed later)
+
+Key Changes Made:
+1. `/home/z/my-project/src/app/api/evidence/route.ts` - Removed saveProgressSnapshot import and call
+2. `/home/z/my-project/src/app/api/evidence/[id]/route.ts` - Removed saveProgressSnapshot import and calls
+3. `/home/z/my-project/src/app/api/snapshots/route.ts` - Rewrote with inline logic + DELETE endpoint
+4. `/home/z/my-project/src/components/qurtubah/DashboardView.tsx` - Enhanced reset with snapshot/cache clearing
+5. Cron jobs 110437, 107675, 106661, 106411, 105606 - All deleted/disabled

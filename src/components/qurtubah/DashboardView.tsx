@@ -565,8 +565,21 @@ export function DashboardView({
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p className="text-red-600 dark:text-red-400 font-medium">
-                سيتم حذف جميع الشواهد نهائياً! لا يمكن التراجع عن هذا الإجراء.
+                سيتم حذف جميع البيانات نهائياً! لا يمكن التراجع عن هذا الإجراء.
               </p>
+              <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-sm space-y-1.5">
+                <p className="font-medium text-red-700 dark:text-red-400">سيتم حذف التالي:</p>
+                <ul className="list-disc list-inside text-red-600 dark:text-red-400 space-y-0.5">
+                  <li>جميع الشواهد والملفات المرفوعة</li>
+                  <li>جميع لقطات التقدم (Snapshots) من قاعدة البيانات</li>
+                  <li>جميع البيانات المخزنة مؤقتاً في المتصفح (localStorage)</li>
+                  <li>جميع سجلات النشاطات</li>
+                  <li>جميع عمليات الاستعادة التلقائية للنسب</li>
+                </ul>
+                <p className="text-red-500 dark:text-red-400 mt-2 font-bold">
+                  ⚠️ بعد إعادة التعيين، لن تعود النسب إلى أي قيمة سابقة (مثل 35%) إلا إذا قمت بإدخال شواهد جديدة يدوياً.
+                </p>
+              </div>
               <p>للتأكيد، اكتب <strong>تأكيد</strong> في الحقل أدناه:</p>
               <Input
                 value={resetConfirmText}
@@ -585,11 +598,29 @@ export function DashboardView({
               onClick={async () => {
                 setResetting(true);
                 try {
+                  // 1. Delete all evidence
                   const allEvidence = fields.flatMap((f) => f.standards.flatMap((s) => s.indicators.flatMap((ind) => ind.evidences)));
                   for (const ev of allEvidence) {
                     await fetch(`/api/evidence/${ev.id}`, { method: 'DELETE' });
                   }
-                  toast.success('تم حذف جميع الشواهد بنجاح');
+
+                  // 2. Delete all snapshots from database
+                  await fetch('/api/snapshots', { method: 'DELETE' });
+
+                  // 3. Delete all activity logs
+                  await fetch('/api/activity', { method: 'DELETE' });
+
+                  // 4. Clear all localStorage cached data
+                  try {
+                    localStorage.removeItem('qurtubah_snapshots');
+                    localStorage.removeItem('qurtubah_notifications');
+                    localStorage.removeItem('qurtubah_onboarding_dismissed');
+                    // Note: keep qurtubah_dark (theme preference) and qurtubah_auth (login session)
+                  } catch {
+                    // ignore
+                  }
+
+                  toast.success('تم إعادة تعيين جميع البيانات بنجاح - لن تعود النسب لأي قيمة سابقة');
                   await onRefresh();
                 } catch {
                   toast.error('فشل في إعادة تعيين البيانات');
@@ -601,7 +632,7 @@ export function DashboardView({
               }}
             >
               {resetting ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
-              حذف جميع الشواهد
+              إعادة تعيين كاملة
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
